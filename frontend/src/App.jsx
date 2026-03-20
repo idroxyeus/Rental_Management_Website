@@ -1,61 +1,41 @@
-import {BrowserRouter,Routes,Route} from "react-router-dom"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { ConfigProvider, theme } from "antd"
 import Login from "./pages/Login"
+import Register from "./pages/Register"
 import Dashboard from "./pages/Dashboard"
 import Properties from "./pages/Properties"
 import Tenants from "./pages/Tenants"
 import Leases from "./pages/Leases"
 import Payments from "./pages/Payments"
 import Complaints from "./pages/Complaints"
-import ProtectedRoute from "./components/ProtectedRoute"
+import AppLayout from "./components/AppLayout"
 
-function App(){
-return(
-<BrowserRouter>
-
-<Routes>
-
-<Route path="/" element={<Login/>}/>
-
-<Route path="/dashboard" element={
-<ProtectedRoute>
-<Dashboard/>
-</ProtectedRoute>
-}/>
-
-<Route path="/properties" element={
-<ProtectedRoute>
-<Properties/>
-</ProtectedRoute>
-}/>
-
-<Route path="/tenants" element={
-<ProtectedRoute>
-<Tenants/>
-</ProtectedRoute>
-}/>
-
-<Route path="/leases" element={
-<ProtectedRoute>
-<Leases/>
-</ProtectedRoute>
-}/>
-
-<Route path="/payments" element={
-<ProtectedRoute>
-<Payments/>
-</ProtectedRoute>
-}/>
-
-<Route path="/complaints" element={
-<ProtectedRoute>
-<Complaints/>
-</ProtectedRoute>
-}/>
-
-</Routes>
-
-</BrowserRouter>
-)
+function App() {
+  return (
+    <ConfigProvider
+      theme={{
+        algorithm: theme.defaultAlgorithm,
+        token: {
+          colorPrimary: "#4f46e5",
+          borderRadius: 8,
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        },
+      }}
+    >
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route path="/properties" element={<AppLayout><Properties /></AppLayout>} />
+          <Route path="/tenants" element={<AppLayout><Tenants /></AppLayout>} />
+          <Route path="/leases" element={<AppLayout><Leases /></AppLayout>} />
+          <Route path="/payments" element={<AppLayout><Payments /></AppLayout>} />
+          <Route path="/complaints" element={<AppLayout><Complaints /></AppLayout>} />
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
+  )
 }
 
 export default App

@@ -1,29 +1,32 @@
-import {useNavigate} from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
+import { FaSignOutAlt } from "react-icons/fa"
 
-function Navbar(){
-
-const navigate=useNavigate()
-
-const logout=()=>{
-localStorage.removeItem("token")
-navigate("/")
+const titles = {
+  "/dashboard": "Dashboard",
+  "/properties": "Properties",
+  "/tenants": "Tenants",
+  "/leases": "Leases",
+  "/payments": "Payments",
+  "/complaints": "Complaints",
 }
 
-return(
-<div className="flex justify-between items-center px-6 py-4 
-bg-white/20 backdrop-blur-lg shadow-md">
+function Navbar() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
 
-<h2 className="text-xl font-bold text-white">Dashboard</h2>
+  const logout = () => { localStorage.removeItem("token"); navigate("/") }
 
-<button 
-onClick={logout}
-className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded text-white shadow-lg"
->
-Logout
-</button>
-
-</div>
-)
+  return (
+    <header className="flex items-center justify-between px-7 py-4 bg-white border-b border-slate-200 sticky top-0 z-40">
+      <h1 className="text-xl font-bold text-slate-800">{titles[pathname] || "Dashboard"}</h1>
+      <button onClick={logout}
+        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-500
+          hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200
+          hover:border-red-200 transition-all cursor-pointer">
+        <FaSignOutAlt className="text-xs" /> Logout
+      </button>
+    </header>
+  )
 }
 
 export default Navbar

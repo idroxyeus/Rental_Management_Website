@@ -1,118 +1,79 @@
-import {useState,useEffect} from "react"
+import { useState, useEffect } from "react"
+import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
 import api from "../api/api"
-import Sidebar from "../components/Sidebar"
-import Navbar from "../components/Navbar"
 
-function Properties(){
+function Properties() {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editId, setEditId] = useState(null)
+  const [form] = Form.useForm()
 
-const[address,setAddress]=useState("")
-const[type,setType]=useState("")
-const[rent,setRent]=useState("")
-const[status,setStatus]=useState("vacant")
-const[editId,setEditId]=useState(null)
+  const load = async () => { try { setData((await api.get("/properties")).data) } catch(e){console.error(e)} finally{setLoading(false)} }
+  useEffect(() => { load() }, [])
 
-const[data,setData]=useState([])
-const token=localStorage.getItem("token")
+  const onFinish = async (values) => {
+    try {
+      const payload = { address: values.address, property_type: values.type, rent_amount: values.rent, status: values.status }
+      if (editId) { await api.put(`/properties/${editId}`, payload) }
+      else { await api.post("/properties", payload) }
+      message.success(editId ? "Property updated!" : "Property added!")
+      form.resetFields(); setEditId(null); load()
+    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+  }
 
-const load=async()=>{
-const res=await api.get("/properties",{headers:{Authorization:`Bearer ${token}`}})
-setData(res.data)
-}
+  const edit = (r) => { setEditId(r.property_id); form.setFieldsValue({ address: r.address, type: r.property_type, rent: r.rent_amount, status: r.status }) }
+  const cancel = () => { setEditId(null); form.resetFields() }
+  const remove = async (id) => { await api.delete(`/properties/${id}`); message.success("Deleted"); load() }
 
-useEffect(()=>{load()},[])
+  const columns = [
+    { title: "Property ID", dataIndex: "property_id", key: "id", width: 110, render: (v) => <Tag color="blue">P-{v}</Tag>, sorter: (a, b) => a.property_id - b.property_id },
+    { title: "Address", dataIndex: "address", key: "address", ellipsis: true },
+    { title: "Type", dataIndex: "property_type", key: "type" },
+    { title: "Rent", dataIndex: "rent_amount", key: "rent", render: (v) => <span style={{ fontWeight: 600 }}>₹{v}</span>, sorter: (a, b) => a.rent_amount - b.rent_amount },
+    { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={s === "vacant" ? "green" : "orange"}>{s}</Tag>,
+      filters: [{ text: "Vacant", value: "vacant" }, { text: "Occupied", value: "occupied" }], onFilter: (val, r) => r.status === val },
+    {
+      title: "Actions", key: "actions", width: 120, align: "right",
+      render: (_, r) => (
+        <Space>
+          <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
+          <Popconfirm title="Delete this property?" onConfirm={() => remove(r.property_id)}>
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
 
-const submit=async(e)=>{
-e.preventDefault()
+  return (
+    <div>
+      <Card title={editId ? `Edit Property P-${editId}` : "Add Property"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "vacant" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+            <Form.Item name="address" label="Address" rules={[{ required: true }]}><Input placeholder="123 Main St" /></Form.Item>
+            <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+              <Select placeholder="Select type" showSearch options={[
+                { value: "Apartment", label: "Apartment" }, { value: "House", label: "House" },
+                { value: "Villa", label: "Villa" }, { value: "Shop", label: "Shop" },
+                { value: "Office", label: "Office" }, { value: "Other", label: "Other" },
+              ]} />
+            </Form.Item>
+            <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
+            <Form.Item name="status" label="Status">
+              <Select options={[{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }]} />
+            </Form.Item>
+          </div>
+          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Property" : "Add Property"}</Button>
+        </Form>
+      </Card>
 
-if(editId){
-await api.put(`/properties/${editId}`,{address,property_type:type,rent_amount:rent,status},{headers:{Authorization:`Bearer ${token}`}})
-setEditId(null)
-}else{
-await api.post("/properties",{address,property_type:type,rent_amount:rent,status},{headers:{Authorization:`Bearer ${token}`}})
-}
-
-setAddress("")
-setType("")
-setRent("")
-load()
-}
-
-const remove=async(id)=>{
-await api.delete(`/properties/${id}`,{headers:{Authorization:`Bearer ${token}`}})
-load()
-}
-
-const edit=(p)=>{
-setEditId(p.property_id)
-setAddress(p.address)
-setType(p.property_type)
-setRent(p.rent_amount)
-setStatus(p.status)
-}
-
-return(
-<div className="flex min-h-screen bg-gradient-to-br from-black via-gray-900 to-indigo-900 text-white">
-
-<Sidebar/>
-
-<div className="ml-64 flex-1">
-
-<Navbar/>
-
-<div className="p-6">
-
-<form onSubmit={submit} className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl shadow mb-6 flex gap-3 flex-wrap">
-
-<input className="p-2 rounded bg-black/30 border border-gray-500" placeholder="Address" value={address} onChange={(e)=>setAddress(e.target.value)}/>
-<input className="p-2 rounded bg-black/30 border border-gray-500" placeholder="Type" value={type} onChange={(e)=>setType(e.target.value)}/>
-<input className="p-2 rounded bg-black/30 border border-gray-500" placeholder="Rent" value={rent} onChange={(e)=>setRent(e.target.value)}/>
-
-<select className="p-2 rounded bg-black/30 border border-gray-500" value={status} onChange={(e)=>setStatus(e.target.value)}>
-<option value="vacant">vacant</option>
-<option value="occupied">occupied</option>
-</select>
-
-<button className="bg-gradient-to-r from-indigo-500 to-pink-500 px-4 py-2 rounded text-white shadow-lg hover:scale-105 transition">
-{editId?"Update":"Add"}
-</button>
-
-</form>
-
-<table className="w-full bg-white/10 backdrop-blur-lg rounded-2xl overflow-hidden shadow">
-
-<thead className="bg-indigo-600/50">
-<tr>
-<th className="p-3">Address</th>
-<th className="p-3">Type</th>
-<th className="p-3">Rent</th>
-<th className="p-3">Actions</th>
-</tr>
-</thead>
-
-<tbody>
-{data.map(p=>(
-<tr key={p.property_id} className="border-t border-gray-700 hover:bg-white/10 transition">
-
-<td className="p-3">{p.address}</td>
-<td className="p-3">{p.property_type}</td>
-<td className="p-3">{p.rent_amount}</td>
-
-<td className="p-3">
-<button onClick={()=>edit(p)} className="text-blue-400 mr-2">Edit</button>
-<button onClick={()=>remove(p.property_id)} className="text-red-400">Delete</button>
-</td>
-
-</tr>
-))}
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-</div>
-)
+      <Card title="All Properties">
+        <Table dataSource={data} columns={columns} rowKey="property_id" loading={loading}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} properties` }} size="middle" />
+      </Card>
+    </div>
+  )
 }
 
 export default Properties

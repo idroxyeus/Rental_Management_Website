@@ -1,80 +1,111 @@
-import {useState,useEffect} from "react"
+import { useState, useEffect } from "react"
+import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
 import api from "../api/api"
-import Sidebar from "../components/Sidebar"
 
-function Complaints(){
+function Complaints() {
+  const [data, setData] = useState([])
+  const [tenants, setTenants] = useState([])
+  const [properties, setProperties] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editId, setEditId] = useState(null)
+  const [form] = Form.useForm()
 
-const[tenantId,setTenantId]=useState("")
-const[propertyId,setPropertyId]=useState("")
-const[description,setDescription]=useState("")
-const[status,setStatus]=useState("open")
-const[editId,setEditId]=useState(null)
+  const load = async () => {
+    try {
+      const [c, t, p] = await Promise.all([api.get("/complaints"), api.get("/tenants"), api.get("/properties")])
+      setData(c.data); setTenants(t.data); setProperties(p.data)
+    } catch(e){console.error(e)} finally{setLoading(false)}
+  }
+  useEffect(() => { load() }, [])
 
-const[data,setData]=useState([])
+  const tenantOptions = tenants.map(t => ({
+    value: t.tenant_id,
+    label: `T-${t.tenant_id}  •  ${t.full_name}  (${t.phone_number})`,
+  }))
 
-const token=localStorage.getItem("token")
+  const propertyOptions = properties.map(p => ({
+    value: p.property_id,
+    label: `P-${p.property_id}  •  ${p.address}  (${p.property_type})`,
+  }))
 
-const load=async()=>{
-const res=await api.get("/complaints",{headers:{Authorization:`Bearer ${token}`}})
-setData(res.data)
-}
+  const tenantMap = Object.fromEntries(tenants.map(t => [t.tenant_id, t]))
+  const propMap = Object.fromEntries(properties.map(p => [p.property_id, p]))
 
-useEffect(()=>{load()},[])
+  const onFinish = async (values) => {
+    try {
+      if (editId) { await api.put(`/complaints/${editId}`, { description: values.description, status: values.status }) }
+      else { await api.post("/complaints", { tenant_id: values.tenantId, property_id: values.propertyId, description: values.description, status: values.status }) }
+      message.success(editId ? "Complaint updated!" : "Complaint filed!")
+      form.resetFields(); setEditId(null); load()
+    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+  }
 
-const submit=async(e)=>{
-e.preventDefault()
+  const edit = (r) => {
+    setEditId(r.complaint_id)
+    form.setFieldsValue({ tenantId: r.tenant_id, propertyId: r.property_id, description: r.description, status: r.status })
+  }
+  const cancel = () => { setEditId(null); form.resetFields() }
+  const remove = async (id) => { await api.delete(`/complaints/${id}`); message.success("Deleted"); load() }
 
-if(editId){
-await api.put(`/complaints/${editId}`,{description,status},{headers:{Authorization:`Bearer ${token}`}})
-setEditId(null)
-}else{
-await api.post("/complaints",{tenant_id:tenantId,property_id:propertyId,description,status},{headers:{Authorization:`Bearer ${token}`}})
-}
+  const statusColors = { open: "orange", in_progress: "blue", resolved: "green" }
 
-load()
-}
+  const columns = [
+    { title: "ID", dataIndex: "complaint_id", key: "id", width: 90, render: (v) => <Tag color="red">C-{v}</Tag>, sorter: (a, b) => a.complaint_id - b.complaint_id },
+    { title: "Tenant", dataIndex: "tenant_id", key: "tenant", render: (id) => {
+      const t = tenantMap[id]; return <span><Tag color="purple">T-{id}</Tag>{t ? ` ${t.full_name}` : ""}</span>
+    }},
+    { title: "Property", dataIndex: "property_id", key: "prop", render: (id) => {
+      const p = propMap[id]; return <span><Tag color="blue">P-{id}</Tag>{p ? ` ${p.address}` : ""}</span>
+    }},
+    { title: "Description", dataIndex: "description", key: "desc", ellipsis: true },
+    { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={statusColors[s]}>{s?.replace("_", " ")}</Tag>,
+      filters: [{ text: "Open", value: "open" }, { text: "In Progress", value: "in_progress" }, { text: "Resolved", value: "resolved" }], onFilter: (v, r) => r.status === v },
+    {
+      title: "Actions", key: "actions", width: 120, align: "right",
+      render: (_, r) => (
+        <Space>
+          <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
+          <Popconfirm title="Delete this complaint?" onConfirm={() => remove(r.complaint_id)}>
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
 
-const remove=async(id)=>{
-await api.delete(`/complaints/${id}`,{headers:{Authorization:`Bearer ${token}`}})
-load()
-}
+  return (
+    <div>
+      <Card title={editId ? `Edit Complaint C-${editId}` : "File Complaint"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "open" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+            <Form.Item name="tenantId" label="Select Tenant" rules={[{ required: !editId, message: "Pick a tenant" }]}>
+              <Select placeholder="Search tenants..." showSearch disabled={!!editId}
+                optionFilterProp="label" options={tenantOptions}
+                notFoundContent="No tenants available" />
+            </Form.Item>
+            <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
+              <Select placeholder="Search properties..." showSearch disabled={!!editId}
+                optionFilterProp="label" options={propertyOptions}
+                notFoundContent="No properties available" />
+            </Form.Item>
+            <Form.Item name="description" label="Description" rules={[{ required: true }]}>
+              <Input.TextArea placeholder="Water leakage in kitchen, broken AC..." rows={1} />
+            </Form.Item>
+            <Form.Item name="status" label="Status">
+              <Select options={[{ value: "open", label: "Open" }, { value: "in_progress", label: "In Progress" }, { value: "resolved", label: "Resolved" }]} />
+            </Form.Item>
+          </div>
+          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Complaint" : "File Complaint"}</Button>
+        </Form>
+      </Card>
 
-const edit=(c)=>{
-setEditId(c.complaint_id)
-setTenantId(c.tenant_id)
-setPropertyId(c.property_id)
-setDescription(c.description)
-setStatus(c.status)
-}
-
-return(
-<div style={{display:"flex"}}>
-<Sidebar/>
-<div style={{padding:"20px",width:"100%"}}>
-
-<form onSubmit={submit}>
-<input value={tenantId} placeholder="Tenant ID" onChange={(e)=>setTenantId(e.target.value)}/>
-<br/><br/>
-<input value={propertyId} placeholder="Property ID" onChange={(e)=>setPropertyId(e.target.value)}/>
-<br/><br/>
-<input value={description} placeholder="Description" onChange={(e)=>setDescription(e.target.value)}/>
-<br/><br/>
-<button type="submit">{editId?"Update":"Add"}</button>
-</form>
-
-<ul>
-{data.map(c=>(
-<li key={c.complaint_id}>
-Tenant {c.tenant_id} - {c.description}
-<button onClick={()=>edit(c)}>Edit</button>
-<button onClick={()=>remove(c.complaint_id)}>Delete</button>
-</li>
-))}
-</ul>
-
-</div>
-</div>
-)
+      <Card title="All Complaints">
+        <Table dataSource={data} columns={columns} rowKey="complaint_id" loading={loading}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} complaints` }} size="middle" scroll={{ x: 700 }} />
+      </Card>
+    </div>
+  )
 }
 
 export default Complaints

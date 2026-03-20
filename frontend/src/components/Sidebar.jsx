@@ -1,27 +1,56 @@
-import { Link } from "react-router-dom"
-import { FaHome, FaBuilding, FaUsers, FaFileContract, FaMoneyBill, FaTools } from "react-icons/fa"
+import { Link, useLocation } from "react-router-dom"
+import { FaHome, FaBuilding, FaUsers, FaFileContract, FaMoneyBillWave, FaExclamationCircle } from "react-icons/fa"
 
-function Sidebar(){
-return(
-<div className="w-64 h-screen fixed top-0 left-0 
-bg-gradient-to-b from-indigo-700 via-purple-700 to-pink-600 
-text-white p-6 shadow-2xl">
+const navItems = [
+  { path: "/dashboard", label: "Dashboard", icon: FaHome },
+  { path: "/properties", label: "Properties", icon: FaBuilding },
+  { path: "/tenants", label: "Tenants", icon: FaUsers },
+  { path: "/leases", label: "Leases", icon: FaFileContract },
+  { path: "/payments", label: "Payments", icon: FaMoneyBillWave },
+  { path: "/complaints", label: "Complaints", icon: FaExclamationCircle },
+]
 
-<h2 className="text-3xl font-extrabold mb-10 tracking-wide">⚡ Rental</h2>
+function Sidebar() {
+  const { pathname } = useLocation()
 
-<ul className="space-y-6 text-lg">
+  return (
+    <aside className="w-60 min-h-screen fixed top-0 left-0 z-50 bg-[#1e1b4b] flex flex-col">
+      {/* Logo */}
+      <div className="px-6 py-6 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md">R</div>
+        <div>
+          <h1 className="text-white font-bold text-lg leading-none">Rental</h1>
+          <span className="text-indigo-300 text-[11px] font-medium tracking-widest uppercase">Manager</span>
+        </div>
+      </div>
 
-<li><Link to="/dashboard" className="flex items-center gap-3 hover:scale-110 transition"><FaHome/> Dashboard</Link></li>
-<li><Link to="/properties" className="flex items-center gap-3 hover:scale-110 transition"><FaBuilding/> Properties</Link></li>
-<li><Link to="/tenants" className="flex items-center gap-3 hover:scale-110 transition"><FaUsers/> Tenants</Link></li>
-<li><Link to="/leases" className="flex items-center gap-3 hover:scale-110 transition"><FaFileContract/> Leases</Link></li>
-<li><Link to="/payments" className="flex items-center gap-3 hover:scale-110 transition"><FaMoneyBill/> Payments</Link></li>
-<li><Link to="/complaints" className="flex items-center gap-3 hover:scale-110 transition"><FaTools/> Complaints</Link></li>
+      <div className="mt-2 mx-5 h-px bg-indigo-400/10" />
 
-</ul>
+      {/* Links */}
+      <nav className="flex-1 px-4 pt-5 pb-4 space-y-1">
+        {navItems.map(({ path, label, icon: Icon }) => {
+          const active = pathname === path
+          return (
+            <Link key={path} to={path}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                ${active
+                  ? "bg-indigo-500 text-white shadow-md shadow-indigo-600/30"
+                  : "text-indigo-200/70 hover:bg-indigo-400/10 hover:text-white"
+                }`}>
+              <Icon className="text-base" />
+              {label}
+            </Link>
+          )
+        })}
+      </nav>
 
-</div>
-)
+      <div className="px-5 pb-5">
+        <div className="rounded-lg bg-indigo-400/10 px-4 py-3 text-center">
+          <p className="text-indigo-300/60 text-[11px]">&copy; 2026 Rental System</p>
+        </div>
+      </div>
+    </aside>
+  )
 }
 
 export default Sidebar
