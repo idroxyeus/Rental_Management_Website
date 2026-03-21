@@ -12,6 +12,7 @@ app.use(express.json());
 app.use("/", require("./routes/auth"));
 app.use("/properties", require("./routes/properties"));
 app.use("/tenants", require("./routes/tenants"));
+app.use("/landlords", require("./routes/landlords"));
 app.use("/leases", require("./routes/leases"));
 app.use("/payments", require("./routes/payments"));
 app.use("/complaints", require("./routes/complaints"));

@@ -23,6 +23,19 @@ CREATE TABLE IF NOT EXISTS properties (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Landlords table
+CREATE TABLE IF NOT EXISTS landlords (
+  landlord_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  full_name VARCHAR(150) NOT NULL,
+  phone_number VARCHAR(20) NOT NULL,
+  email VARCHAR(100),
+  address TEXT,
+  id_proof VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
 -- Tenants table (Aadhaar-style personal details)
 CREATE TABLE IF NOT EXISTS tenants (
   tenant_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -39,6 +52,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   emergency_contact_name VARCHAR(100),
   emergency_contact_phone VARCHAR(20),
   id_proof VARCHAR(100),
+  income DECIMAL(10, 2),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

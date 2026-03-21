@@ -23,10 +23,22 @@ router.post("/", verifyToken, (req, res) => {
 
 // Get all payments
 router.get("/", verifyToken, (req, res) => {
-  db.query("SELECT * FROM payments ORDER BY payment_id DESC", (err, results) => {
-    if (err) return res.status(500).json({ message: "Failed to fetch payments" });
-    res.json(results);
-  });
+  if (req.user.role === "tenant") {
+    db.query("SELECT tenant_id FROM tenants WHERE user_id = ?", [req.user.id], (err, tenants) => {
+      if (err || !tenants.length) return res.json([]);
+      db.query(`SELECT p.* FROM payments p 
+                JOIN leases l ON p.lease_id = l.lease_id 
+                WHERE l.tenant_id = ? ORDER BY p.payment_id DESC`, [tenants[0].tenant_id], (err, results) => {
+        if (err) return res.status(500).json({ message: "Failed to fetch payments" });
+        res.json(results);
+      });
+    });
+  } else {
+    db.query("SELECT * FROM payments ORDER BY payment_id DESC", (err, results) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch payments" });
+      res.json(results);
+    });
+  }
 });
 
 // Update payment

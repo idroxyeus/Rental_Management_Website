@@ -189,6 +189,7 @@ function Tenants() {
                 <Descriptions.Item label="DOB">{r.date_of_birth?.split("T")[0] || "—"}</Descriptions.Item>
                 <Descriptions.Item label="Email">{r.email || "—"}</Descriptions.Item>
                 <Descriptions.Item label="PAN">{r.pan_number || "—"}</Descriptions.Item>
+                <Descriptions.Item label="Monthly Income">{r.income ? `₹${r.income}` : "—"}</Descriptions.Item>
                 <Descriptions.Item label="Permanent Address" span={2}>{r.permanent_address || "—"}</Descriptions.Item>
                 <Descriptions.Item label="Emergency Contact">{r.emergency_contact_name ? `${r.emergency_contact_name} (${r.emergency_contact_phone || "—"})` : "—"}</Descriptions.Item>
                 <Descriptions.Item label="ID Proof">{r.id_proof || "—"}</Descriptions.Item>

@@ -8,7 +8,7 @@ router.post("/", verifyToken, (req, res) => {
   const {
     user_id, full_name, date_of_birth, gender, phone_number, email,
     permanent_address, aadhaar_number, pan_number, occupation,
-    emergency_contact_name, emergency_contact_phone, id_proof,
+    emergency_contact_name, emergency_contact_phone, id_proof, income,
   } = req.body;
 
   if (!user_id || !full_name || !phone_number) {
@@ -18,11 +18,11 @@ router.post("/", verifyToken, (req, res) => {
   db.query(
     `INSERT INTO tenants (user_id, full_name, date_of_birth, gender, phone_number, email,
       permanent_address, aadhaar_number, pan_number, occupation,
-      emergency_contact_name, emergency_contact_phone, id_proof)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      emergency_contact_name, emergency_contact_phone, id_proof, income)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [user_id, full_name, date_of_birth || null, gender || "male", phone_number, email || null,
      permanent_address || null, aadhaar_number || null, pan_number || null, occupation || null,
-     emergency_contact_name || null, emergency_contact_phone || null, id_proof || null],
+     emergency_contact_name || null, emergency_contact_phone || null, id_proof || null, income || null],
     (err, result) => {
       if (err) return res.status(500).json({ message: "Failed to create tenant", error: err.message });
       res.status(201).json({ tenant_id: result.insertId, message: "Tenant created" });
@@ -56,17 +56,17 @@ router.put("/:id", verifyToken, (req, res) => {
   const {
     full_name, date_of_birth, gender, phone_number, email,
     permanent_address, aadhaar_number, pan_number, occupation,
-    emergency_contact_name, emergency_contact_phone, id_proof,
+    emergency_contact_name, emergency_contact_phone, id_proof, income,
   } = req.body;
 
   db.query(
     `UPDATE tenants SET full_name=?, date_of_birth=?, gender=?, phone_number=?, email=?,
       permanent_address=?, aadhaar_number=?, pan_number=?, occupation=?,
-      emergency_contact_name=?, emergency_contact_phone=?, id_proof=?
+      emergency_contact_name=?, emergency_contact_phone=?, id_proof=?, income=?
      WHERE tenant_id=?`,
     [full_name, date_of_birth || null, gender, phone_number, email || null,
      permanent_address || null, aadhaar_number || null, pan_number || null, occupation || null,
-     emergency_contact_name || null, emergency_contact_phone || null, id_proof || null,
+     emergency_contact_name || null, emergency_contact_phone || null, id_proof || null, income || null,
      req.params.id],
     (err, result) => {
       if (err) return res.status(500).json({ message: "Failed to update tenant", error: err.message });

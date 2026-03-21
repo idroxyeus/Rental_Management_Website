@@ -19,16 +19,27 @@ const cards = [
 ]
 
 function Dashboard() {
+  const [userCtx, setUserCtx] = useState(null)
   const [stats, setStats] = useState({ properties: 0, tenants: 0, leases: 0, payments: 0, complaints: 0 })
+  const [tenantStats, setTenantStats] = useState({ payments: [], complaints: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      api.get("/properties"), api.get("/tenants"), api.get("/leases"),
-      api.get("/payments"), api.get("/complaints"),
-    ]).then(([p, t, l, pay, c]) => {
-      setStats({ properties: p.data.length, tenants: t.data.length, leases: l.data.length, payments: pay.data.length, complaints: c.data.length })
-    }).catch(console.error).finally(() => setLoading(false))
+    api.get("/me").then(res => {
+      setUserCtx(res.data)
+      if (res.data.user.role === "tenant") {
+        Promise.all([api.get("/payments"), api.get("/complaints")])
+          .then(([pay, c]) => setTenantStats({ payments: pay.data, complaints: c.data }))
+          .finally(() => setLoading(false))
+      } else {
+        Promise.all([
+          api.get("/properties"), api.get("/tenants"), api.get("/leases"),
+          api.get("/payments"), api.get("/complaints"),
+        ]).then(([p, t, l, pay, c]) => {
+          setStats({ properties: p.data.length, tenants: t.data.length, leases: l.data.length, payments: pay.data.length, complaints: c.data.length })
+        }).finally(() => setLoading(false))
+      }
+    }).catch(console.error)
   }, [])
 
   const chartData = {
@@ -53,6 +64,77 @@ function Dashboard() {
 
   if (loading) return <div style={{ display: "flex", justifyContent: "center", paddingTop: 100 }}><Spin size="large" /></div>
 
+  // Tenant POV
+  if (userCtx?.user.role === "tenant") {
+    const l = userCtx.activeLease
+    return (
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Welcome back, {userCtx.user.name}</h2>
+        {!userCtx.tenant ? (
+          <Card style={{ textAlign: "center", padding: 40, border: "1px solid #ff4d4f", background: "#fff2f0" }}>
+            <h3 style={{ color: "#cf1322", marginTop: 0 }}>Profile Incomplete!</h3>
+            <p>Please navigate to your Profile to add your details before you can apply for a lease.</p>
+          </Card>
+        ) : !l ? (
+          <Card style={{ textAlign: "center", padding: 40, background: "#fafafa" }}>
+            <h3 style={{ marginTop: 0 }}>No Active Lease</h3>
+            <p>You currently do not have a property assigned to you. Browse Properties to find your next home.</p>
+          </Card>
+        ) : (
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12}>
+              <Card title="My Active Lease" bordered={false} style={{ height: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#8c8c8c" }}>Status</span>
+                    <span style={{ color: "#52c41a", fontWeight: "bold" }}>ACTIVE</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#8c8c8c" }}>Rent Amount</span>
+                    <span style={{ fontSize: 18, fontWeight: "bold" }}>₹{l.rent_amount}/mo</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#8c8c8c" }}>Security Deposit</span>
+                    <span>₹{l.deposit}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#8c8c8c" }}>Lease Duration</span>
+                    <span>{l.start_date.split("T")[0]} to {l.end_date.split("T")[0]}</span>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+            <Col xs={24} md={12}>
+              <Card title="Recent Activity" bordered={false} style={{ height: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                <div style={{ marginBottom: 16 }}>
+                  <span style={{ display: "block", color: "#8c8c8c", marginBottom: 4 }}>Recent Payments</span>
+                  {tenantStats.payments.slice(0, 2).map(p => (
+                    <div key={p.payment_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
+                      <span>{p.month || p.payment_date.split("T")[0]}</span>
+                      <strong style={{ color: p.status === "paid" ? "#52c41a" : "#faad14" }}>₹{p.amount} ({p.status})</strong>
+                    </div>
+                  ))}
+                  {tenantStats.payments.length === 0 && <span style={{ fontSize: 13, color: "#bfbfbf" }}>No payments made yet.</span>}
+                </div>
+                <div>
+                  <span style={{ display: "block", color: "#8c8c8c", marginBottom: 4 }}>Recent Maintenance</span>
+                  {tenantStats.complaints.slice(0, 2).map(c => (
+                    <div key={c.complaint_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
+                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 150 }}>{c.description}</span>
+                      <strong style={{ color: c.status === "resolved" ? "#52c41a" : "#faad14" }}>{c.status.replace("_", " ")}</strong>
+                    </div>
+                  ))}
+                  {tenantStats.complaints.length === 0 && <span style={{ fontSize: 13, color: "#bfbfbf" }}>No complaints filed.</span>}
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        )}
+      </div>
+    )
+  }
+
+  // Admin / Landlord POV
   return (
     <div>
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>

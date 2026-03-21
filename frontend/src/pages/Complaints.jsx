@@ -7,14 +7,15 @@ function Complaints() {
   const [data, setData] = useState([])
   const [tenants, setTenants] = useState([])
   const [properties, setProperties] = useState([])
+  const [userCtx, setUserCtx] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
 
   const load = async () => {
     try {
-      const [c, t, p] = await Promise.all([api.get("/complaints"), api.get("/tenants"), api.get("/properties")])
-      setData(c.data); setTenants(t.data); setProperties(p.data)
+      const [c, t, p, u] = await Promise.all([api.get("/complaints"), api.get("/tenants"), api.get("/properties"), api.get("/me")])
+      setData(c.data); setTenants(t.data); setProperties(p.data); setUserCtx(u.data)
     } catch(e){console.error(e)} finally{setLoading(false)}
   }
   useEffect(() => { load() }, [])
@@ -34,8 +35,9 @@ function Complaints() {
 
   const onFinish = async (values) => {
     try {
+      const tenantId = userCtx?.user.role === "tenant" ? userCtx.tenant.tenant_id : values.tenantId;
       if (editId) { await api.put(`/complaints/${editId}`, { description: values.description, status: values.status }) }
-      else { await api.post("/complaints", { tenant_id: values.tenantId, property_id: values.propertyId, description: values.description, status: values.status }) }
+      else { await api.post("/complaints", { tenant_id: tenantId, property_id: values.propertyId, description: values.description, status: values.status || "open" }) }
       message.success(editId ? "Complaint updated!" : "Complaint filed!")
       form.resetFields(); setEditId(null); load()
     } catch (err) { message.error(err.response?.data?.message || "Failed") }
@@ -61,7 +63,10 @@ function Complaints() {
     { title: "Description", dataIndex: "description", key: "desc", ellipsis: true },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={statusColors[s]}>{s?.replace("_", " ")}</Tag>,
       filters: [{ text: "Open", value: "open" }, { text: "In Progress", value: "in_progress" }, { text: "Resolved", value: "resolved" }], onFilter: (v, r) => r.status === v },
-    {
+  ]
+
+  if (userCtx?.user.role !== "tenant") {
+    columns.push({
       title: "Actions", key: "actions", width: 120, align: "right",
       render: (_, r) => (
         <Space>
@@ -71,19 +76,21 @@ function Complaints() {
           </Popconfirm>
         </Space>
       ),
-    },
-  ]
+    })
+  }
 
   return (
     <div>
       <Card title={editId ? `Edit Complaint C-${editId}` : "File Complaint"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "open" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-            <Form.Item name="tenantId" label="Select Tenant" rules={[{ required: !editId, message: "Pick a tenant" }]}>
-              <Select placeholder="Search tenants..." showSearch disabled={!!editId}
-                optionFilterProp="label" options={tenantOptions}
-                notFoundContent="No tenants available" />
-            </Form.Item>
+            {userCtx?.user.role !== "tenant" && (
+              <Form.Item name="tenantId" label="Select Tenant" rules={[{ required: !editId, message: "Pick a tenant" }]}>
+                <Select placeholder="Search tenants..." showSearch disabled={!!editId}
+                  optionFilterProp="label" options={tenantOptions}
+                  notFoundContent="No tenants available" />
+              </Form.Item>
+            )}
             <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
               <Select placeholder="Search properties..." showSearch disabled={!!editId}
                 optionFilterProp="label" options={propertyOptions}
@@ -92,15 +99,17 @@ function Complaints() {
             <Form.Item name="description" label="Description" rules={[{ required: true }]}>
               <Input.TextArea placeholder="Water leakage in kitchen, broken AC..." rows={1} />
             </Form.Item>
-            <Form.Item name="status" label="Status">
-              <Select options={[{ value: "open", label: "Open" }, { value: "in_progress", label: "In Progress" }, { value: "resolved", label: "Resolved" }]} />
-            </Form.Item>
+            {userCtx?.user.role !== "tenant" && (
+              <Form.Item name="status" label="Status">
+                <Select options={[{ value: "open", label: "Open" }, { value: "in_progress", label: "In Progress" }, { value: "resolved", label: "Resolved" }]} />
+              </Form.Item>
+            )}
           </div>
           <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Complaint" : "File Complaint"}</Button>
         </Form>
       </Card>
 
-      <Card title="All Complaints">
+      <Card title={userCtx?.user.role === "tenant" ? "My Complaints" : "All Complaints"}>
         <Table dataSource={data} columns={columns} rowKey="complaint_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} complaints` }} size="middle" scroll={{ x: 700 }} />
       </Card>

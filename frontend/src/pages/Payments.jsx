@@ -9,13 +9,14 @@ function Payments() {
   const [properties, setProperties] = useState([])
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
+  const [userCtx, setUserCtx] = useState(null)
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
 
   const load = async () => {
     try {
-      const [pay, l, p, t] = await Promise.all([api.get("/payments"), api.get("/leases"), api.get("/properties"), api.get("/tenants")])
-      setData(pay.data); setLeases(l.data); setProperties(p.data); setTenants(t.data)
+      const [pay, l, p, t, u] = await Promise.all([api.get("/payments"), api.get("/leases"), api.get("/properties"), api.get("/tenants"), api.get("/me")])
+      setData(pay.data); setLeases(l.data); setProperties(p.data); setTenants(t.data); setUserCtx(u.data)
     } catch(e){console.error(e)} finally{setLoading(false)}
   }
   useEffect(() => { load() }, [])
@@ -63,7 +64,10 @@ function Payments() {
     { title: "Month", dataIndex: "month", key: "month", render: (v) => v || <span style={{ color: "#bbb" }}>—</span> },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={statusColors[s]}>{s}</Tag>,
       filters: [{ text: "Paid", value: "paid" }, { text: "Pending", value: "pending" }, { text: "Overdue", value: "overdue" }], onFilter: (v, r) => r.status === v },
-    {
+  ]
+
+  if (userCtx?.user.role !== "tenant") {
+    columns.push({
       title: "Actions", key: "actions", width: 120, align: "right",
       render: (_, r) => (
         <Space>
@@ -73,13 +77,13 @@ function Payments() {
           </Popconfirm>
         </Space>
       ),
-    },
-  ]
+    })
+  }
 
   return (
     <div>
       <Card title={editId ? `Edit Payment PAY-${editId}` : "Record Payment"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
-        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "paid" }}>
+        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "pending" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             <Form.Item name="leaseId" label="Select Lease" rules={[{ required: !editId, message: "Pick a lease" }]}>
               <Select placeholder="Search leases..." showSearch disabled={!!editId}
@@ -89,15 +93,17 @@ function Payments() {
             <Form.Item name="amount" label="Amount (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
             <Form.Item name="date" label="Payment Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
             <Form.Item name="month" label="Month"><Input placeholder="March 2026" /></Form.Item>
-            <Form.Item name="status" label="Status">
-              <Select options={[{ value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "overdue", label: "Overdue" }]} />
-            </Form.Item>
+            {userCtx?.user.role !== "tenant" && (
+              <Form.Item name="status" label="Status">
+                <Select options={[{ value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "overdue", label: "Overdue" }]} />
+              </Form.Item>
+            )}
           </div>
-          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Payment" : "Record Payment"}</Button>
+          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Payment" : "Submit Payment Record"}</Button>
         </Form>
       </Card>
 
-      <Card title="All Payments">
+      <Card title={userCtx?.user.role === "tenant" ? "My Payment History" : "All Payments"}>
         <Table dataSource={data} columns={columns} rowKey="payment_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} payments` }} size="middle" scroll={{ x: 800 }} />
       </Card>

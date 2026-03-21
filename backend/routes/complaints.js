@@ -23,10 +23,20 @@ router.post("/", verifyToken, (req, res) => {
 
 // Get all complaints
 router.get("/", verifyToken, (req, res) => {
-  db.query("SELECT * FROM complaints ORDER BY complaint_id DESC", (err, results) => {
-    if (err) return res.status(500).json({ message: "Failed to fetch complaints" });
-    res.json(results);
-  });
+  if (req.user.role === "tenant") {
+    db.query("SELECT tenant_id FROM tenants WHERE user_id = ?", [req.user.id], (err, tenants) => {
+      if (err || !tenants.length) return res.json([]);
+      db.query("SELECT * FROM complaints WHERE tenant_id = ? ORDER BY complaint_id DESC", [tenants[0].tenant_id], (err, results) => {
+        if (err) return res.status(500).json({ message: "Failed to fetch complaints" });
+        res.json(results);
+      });
+    });
+  } else {
+    db.query("SELECT * FROM complaints ORDER BY complaint_id DESC", (err, results) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch complaints" });
+      res.json(results);
+    });
+  }
 });
 
 // Update complaint

@@ -5,11 +5,18 @@ import api from "../api/api"
 
 function Properties() {
   const [data, setData] = useState([])
+  const [userCtx, setUserCtx] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
 
-  const load = async () => { try { setData((await api.get("/properties")).data) } catch(e){console.error(e)} finally{setLoading(false)} }
+  const load = async () => { 
+    try { 
+      const [p, u] = await Promise.all([api.get("/properties"), api.get("/me")])
+      setData(p.data) 
+      setUserCtx(u.data)
+    } catch(e){console.error(e)} finally{setLoading(false)} 
+  }
   useEffect(() => { load() }, [])
 
   const onFinish = async (values) => {
@@ -33,42 +40,40 @@ function Properties() {
     { title: "Rent", dataIndex: "rent_amount", key: "rent", render: (v) => <span style={{ fontWeight: 600 }}>₹{v}</span>, sorter: (a, b) => a.rent_amount - b.rent_amount },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={s === "vacant" ? "green" : "orange"}>{s}</Tag>,
       filters: [{ text: "Vacant", value: "vacant" }, { text: "Occupied", value: "occupied" }], onFilter: (val, r) => r.status === val },
-    {
-      title: "Actions", key: "actions", width: 120, align: "right",
-      render: (_, r) => (
-        <Space>
-          <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
-          <Popconfirm title="Delete this property?" onConfirm={() => remove(r.property_id)}>
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
   ]
+
+  if (userCtx?.user.role !== "tenant") {
+    columns.push({
+      title: "Actions", key: "actions", width: 120, align: "right",
+      ),
+    })
+  }
 
   return (
     <div>
-      <Card title={editId ? `Edit Property P-${editId}` : "Add Property"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
-        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "vacant" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-            <Form.Item name="address" label="Address" rules={[{ required: true }]}><Input placeholder="123 Main St" /></Form.Item>
-            <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-              <Select placeholder="Select type" showSearch options={[
-                { value: "Apartment", label: "Apartment" }, { value: "House", label: "House" },
-                { value: "Villa", label: "Villa" }, { value: "Shop", label: "Shop" },
-                { value: "Office", label: "Office" }, { value: "Other", label: "Other" },
-              ]} />
-            </Form.Item>
-            <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
-            <Form.Item name="status" label="Status">
-              <Select options={[{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }]} />
-            </Form.Item>
-          </div>
-          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Property" : "Add Property"}</Button>
-        </Form>
-      </Card>
+      {userCtx?.user.role !== "tenant" && (
+        <Card title={editId ? `Edit Property P-${editId}` : "Add Property"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+          <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "vacant" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+              <Form.Item name="address" label="Address" rules={[{ required: true }]}><Input placeholder="123 Main St" /></Form.Item>
+              <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+                <Select placeholder="Select type" showSearch options={[
+                  { value: "Apartment", label: "Apartment" }, { value: "House", label: "House" },
+                  { value: "Villa", label: "Villa" }, { value: "Shop", label: "Shop" },
+                  { value: "Office", label: "Office" }, { value: "Other", label: "Other" },
+                ]} />
+              </Form.Item>
+              <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
+              <Form.Item name="status" label="Status">
+                <Select options={[{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }]} />
+              </Form.Item>
+            </div>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Property" : "Add Property"}</Button>
+          </Form>
+        </Card>
+      )}
 
-      <Card title="All Properties">
+      <Card title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"}>
         <Table dataSource={data} columns={columns} rowKey="property_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} properties` }} size="middle" />
       </Card>

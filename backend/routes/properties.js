@@ -23,10 +23,17 @@ router.post("/", verifyToken, (req, res) => {
 
 // Get all properties
 router.get("/", verifyToken, (req, res) => {
-  db.query("SELECT * FROM properties ORDER BY property_id DESC", (err, results) => {
-    if (err) return res.status(500).json({ message: "Failed to fetch properties" });
-    res.json(results);
-  });
+  if (req.user.role === "tenant") {
+    db.query("SELECT * FROM properties WHERE status = 'vacant' ORDER BY property_id DESC", (err, results) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch properties" });
+      res.json(results);
+    });
+  } else {
+    db.query("SELECT * FROM properties ORDER BY property_id DESC", (err, results) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch properties" });
+      res.json(results);
+    });
+  }
 });
 
 // Get single property

@@ -68,4 +68,38 @@ router.get("/profile", verifyToken, (req, res) => {
   });
 });
 
+// Me (Full Context)
+router.get("/me", verifyToken, (req, res) => {
+  db.query("SELECT user_id, name, email, role FROM users WHERE user_id = ?", [req.user.id], (err, users) => {
+    if (err) return res.status(500).json({ message: "Server error" });
+    if (!users.length) return res.status(404).json({ message: "User not found" });
+    
+    const user = users[0];
+    const payload = { user };
+
+    if (user.role === "tenant") {
+      db.query("SELECT * FROM tenants WHERE user_id = ?", [user.user_id], (err, tenants) => {
+        if (!err && tenants.length) {
+          payload.tenant = tenants[0];
+          db.query("SELECT * FROM leases WHERE tenant_id = ? AND status = 'active'", [payload.tenant.tenant_id], (err, leases) => {
+            payload.activeLease = (!err && leases.length) ? leases[0] : null;
+            res.json(payload);
+          });
+        } else {
+          payload.tenant = null;
+          payload.activeLease = null;
+          res.json(payload);
+        }
+      });
+    } else if (user.role === "landlord") {
+      db.query("SELECT * FROM landlords WHERE user_id = ?", [user.user_id], (err, landlords) => {
+        payload.landlord = (!err && landlords.length) ? landlords[0] : null;
+        res.json(payload);
+      });
+    } else {
+      res.json(payload); // admin
+    }
+  });
+});
+
 module.exports = router;

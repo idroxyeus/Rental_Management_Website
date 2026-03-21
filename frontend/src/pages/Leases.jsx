@@ -7,14 +7,15 @@ function Leases() {
   const [data, setData] = useState([])
   const [properties, setProperties] = useState([])
   const [tenants, setTenants] = useState([])
+  const [userCtx, setUserCtx] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
 
   const load = async () => {
     try {
-      const [l, p, t] = await Promise.all([api.get("/leases"), api.get("/properties"), api.get("/tenants")])
-      setData(l.data); setProperties(p.data); setTenants(t.data)
+      const [l, p, t, u] = await Promise.all([api.get("/leases"), api.get("/properties"), api.get("/tenants"), api.get("/me")])
+      setData(l.data); setProperties(p.data); setTenants(t.data); setUserCtx(u.data)
     } catch(e){console.error(e)} finally{setLoading(false)}
   }
   useEffect(() => { load() }, [])
@@ -70,7 +71,10 @@ function Leases() {
     { title: "Rent", dataIndex: "rent_amount", key: "rent", render: (v) => <span style={{ fontWeight: 600 }}>₹{v}</span> },
     { title: "Status", dataIndex: "status", key: "status", render: (s) => <Tag color={statusColors[s]}>{s}</Tag>,
       filters: [{ text: "Active", value: "active" }, { text: "Expired", value: "expired" }, { text: "Terminated", value: "terminated" }], onFilter: (v, r) => r.status === v },
-    {
+  ]
+
+  if (userCtx?.user.role !== "tenant") {
+    columns.push({
       title: "Actions", key: "actions", width: 120, align: "right",
       render: (_, r) => (
         <Space>
@@ -80,37 +84,39 @@ function Leases() {
           </Popconfirm>
         </Space>
       ),
-    },
-  ]
+    })
+  }
 
   return (
     <div>
-      <Card title={editId ? `Edit Lease L-${editId}` : "Create Lease"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
-        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "active" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-            <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
-              <Select placeholder="Search properties..." showSearch disabled={!!editId}
-                optionFilterProp="label" options={propertyOptions}
-                notFoundContent="No properties available" />
-            </Form.Item>
-            <Form.Item name="tenantId" label="Select Tenant" rules={[{ required: !editId, message: "Pick a tenant" }]}>
-              <Select placeholder="Search tenants..." showSearch disabled={!!editId}
-                optionFilterProp="label" options={tenantOptions}
-                notFoundContent="No tenants available" />
-            </Form.Item>
-            <Form.Item name="startDate" label="Start Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
-            <Form.Item name="endDate" label="End Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
-            <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
-            <Form.Item name="deposit" label="Deposit (₹)"><Input type="number" placeholder="30000" /></Form.Item>
-            <Form.Item name="status" label="Status">
-              <Select options={[{ value: "active", label: "Active" }, { value: "expired", label: "Expired" }, { value: "terminated", label: "Terminated" }]} />
-            </Form.Item>
-          </div>
-          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Lease" : "Create Lease"}</Button>
-        </Form>
-      </Card>
+      {userCtx?.user.role !== "tenant" && (
+        <Card title={editId ? `Edit Lease L-${editId}` : "Create Lease"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+          <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "active" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+              <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
+                <Select placeholder="Search properties..." showSearch disabled={!!editId}
+                  optionFilterProp="label" options={propertyOptions}
+                  notFoundContent="No properties available" />
+              </Form.Item>
+              <Form.Item name="tenantId" label="Select Tenant" rules={[{ required: !editId, message: "Pick a tenant" }]}>
+                <Select placeholder="Search tenants..." showSearch disabled={!!editId}
+                  optionFilterProp="label" options={tenantOptions}
+                  notFoundContent="No tenants available" />
+              </Form.Item>
+              <Form.Item name="startDate" label="Start Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+              <Form.Item name="endDate" label="End Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+              <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
+              <Form.Item name="deposit" label="Deposit (₹)"><Input type="number" placeholder="30000" /></Form.Item>
+              <Form.Item name="status" label="Status">
+                <Select options={[{ value: "active", label: "Active" }, { value: "expired", label: "Expired" }, { value: "terminated", label: "Terminated" }]} />
+              </Form.Item>
+            </div>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Lease" : "Create Lease"}</Button>
+          </Form>
+        </Card>
+      )}
 
-      <Card title="All Leases">
+      <Card title={userCtx?.user.role === "tenant" ? "My Active Leases" : "All Leases"}>
         <Table dataSource={data} columns={columns} rowKey="lease_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} leases` }} size="middle" scroll={{ x: 900 }} />
       </Card>

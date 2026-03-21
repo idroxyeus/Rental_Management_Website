@@ -4,23 +4,26 @@ import { Layout, Menu, Button, Typography, Avatar } from "antd"
 import {
   DashboardOutlined, HomeOutlined, TeamOutlined,
   FileTextOutlined, DollarOutlined, WarningOutlined,
-  LogoutOutlined,
+  LogoutOutlined, UserOutlined
 } from "@ant-design/icons"
+import api from "../api/api"
 
 const { Sider, Header, Content } = Layout
 const { Text } = Typography
 
-const menuItems = [
+const baseMenuItems = [
   { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+  { key: "/profile", icon: <UserOutlined />, label: "Profile" },
   { key: "/properties", icon: <HomeOutlined />, label: "Properties" },
-  { key: "/tenants", icon: <TeamOutlined />, label: "Tenants" },
-  { key: "/leases", icon: <FileTextOutlined />, label: "Leases" },
-  { key: "/payments", icon: <DollarOutlined />, label: "Payments" },
-  { key: "/complaints", icon: <WarningOutlined />, label: "Complaints" },
+  { key: "/tenants", icon: <TeamOutlined />, label: "Tenants", roles: ["admin", "landlord"] },
+  { key: "/leases", icon: <FileTextOutlined />, label: "Leases", requiresLease: true },
+  { key: "/payments", icon: <DollarOutlined />, label: "Payments", requiresLease: true },
+  { key: "/complaints", icon: <WarningOutlined />, label: "Complaints", requiresLease: true },
 ]
 
 const pageTitles = {
   "/dashboard": "Dashboard",
+  "/profile": "My Profile",
   "/properties": "Properties",
   "/tenants": "Tenants",
   "/leases": "Leases",
@@ -30,10 +33,23 @@ const pageTitles = {
 
 function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [userCtx, setUserCtx] = useState(null)
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
+  useEffect(() => {
+    if (!localStorage.getItem("token")) return navigate("/")
+    api.get("/me").then(res => setUserCtx(res.data)).catch(() => navigate("/"))
+  }, [navigate])
+
   if (!localStorage.getItem("token")) return <Navigate to="/" />
+  if (!userCtx) return <div style={{ padding: 50, textAlign: "center" }}>Loading application...</div>
+
+  const allowedMenus = baseMenuItems.filter(m => {
+    if (m.roles && !m.roles.includes(userCtx.user.role)) return false;
+    if (userCtx.user.role === "tenant" && m.requiresLease && !userCtx.activeLease) return false;
+    return true;
+  }).map(({ key, icon, label }) => ({ key, icon, label }))
 
   const logout = () => {
     localStorage.removeItem("token")
@@ -78,7 +94,7 @@ function AppLayout({ children }) {
           theme="dark"
           mode="inline"
           selectedKeys={[pathname]}
-          items={menuItems}
+          items={allowedMenus}
           onClick={({ key }) => navigate(key)}
           style={{
             background: "transparent",

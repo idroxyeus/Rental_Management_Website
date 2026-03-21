@@ -8,6 +8,7 @@ import Tenants from "./pages/Tenants"
 import Leases from "./pages/Leases"
 import Payments from "./pages/Payments"
 import Complaints from "./pages/Complaints"
+import Profile from "./pages/Profile"
 import AppLayout from "./components/AppLayout"
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
           <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/properties" element={<AppLayout><Properties /></AppLayout>} />
           <Route path="/tenants" element={<AppLayout><Tenants /></AppLayout>} />
