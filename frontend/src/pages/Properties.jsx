@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
+import { useNavigate } from "react-router-dom"
+import { PlusOutlined, EditOutlined, DeleteOutlined, HeartOutlined, EyeOutlined } from "@ant-design/icons"
 import api from "../api/api"
 
 function Properties() {
@@ -9,6 +10,7 @@ function Properties() {
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
+  const navigate = useNavigate()
 
   const load = async () => { 
     try { 
@@ -33,6 +35,13 @@ function Properties() {
   const cancel = () => { setEditId(null); form.resetFields() }
   const remove = async (id) => { await api.delete(`/properties/${id}`); message.success("Deleted"); load() }
 
+  const handleInterest = async (id) => {
+    try {
+      await api.post(`/properties/${id}/interest`)
+      message.success("Interest sent to landlord!")
+    } catch(e) { message.error(e.response?.data?.message || "Failed to express interest") }
+  }
+
   const columns = [
     { title: "Property ID", dataIndex: "property_id", key: "id", width: 110, render: (v) => <Tag color="blue">P-{v}</Tag>, sorter: (a, b) => a.property_id - b.property_id },
     { title: "Address", dataIndex: "address", key: "address", ellipsis: true },
@@ -42,9 +51,26 @@ function Properties() {
       filters: [{ text: "Vacant", value: "vacant" }, { text: "Occupied", value: "occupied" }], onFilter: (val, r) => r.status === val },
   ]
 
-  if (userCtx?.user.role !== "tenant") {
+  if (userCtx?.user.role === "tenant") {
     columns.push({
-      title: "Actions", key: "actions", width: 120, align: "right",
+      title: "Actions", key: "actions", width: 150, align: "right",
+      render: (_, r) => r.status === "vacant" ? (
+        <Button size="small" type="primary" icon={<HeartOutlined />} onClick={() => handleInterest(r.property_id)}>
+          I'm Interested
+        </Button>
+      ) : null
+    })
+  } else if (userCtx?.user.role && userCtx.user.role !== "tenant") {
+    columns.push({
+      title: "Actions", key: "actions", width: 220, align: "right",
+      render: (_, r) => (
+        <Space>
+          <Button size="small" onClick={() => navigate(`/tenants?interested_in=${r.property_id}`)} icon={<EyeOutlined />}>View Interested</Button>
+          <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
+          <Popconfirm title="Delete this property?" onConfirm={() => remove(r.property_id)}>
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
       ),
     })
   }

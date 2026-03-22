@@ -69,4 +69,34 @@ router.delete("/:id", verifyToken, (req, res) => {
   });
 });
 
+// Express interest in a property
+router.post("/:id/interest", verifyToken, (req, res) => {
+  if (req.user.role !== "tenant") return res.status(403).json({ message: "Only tenants can express interest" });
+  
+  db.query("SELECT tenant_id FROM tenants WHERE user_id = ?", [req.user.id], (err, tenants) => {
+    if (err || !tenants.length) return res.status(400).json({ message: "Tenant profile incomplete" });
+    const tenantId = tenants[0].tenant_id;
+    
+    db.query(
+      "INSERT INTO property_interests (property_id, tenant_id) VALUES (?, ?)",
+      [req.params.id, tenantId],
+      (err) => {
+        if (err) {
+          if (err.code === "ER_DUP_ENTRY") return res.status(400).json({ message: "Already expressed interest" });
+          return res.status(500).json({ message: "Failed to express interest" });
+        }
+        res.status(201).json({ message: "Interest recorded" });
+      }
+    );
+  });
+});
+
+// Get interests for a property
+router.get("/:id/interests", verifyToken, (req, res) => {
+  db.query("SELECT tenant_id FROM property_interests WHERE property_id = ?", [req.params.id], (err, results) => {
+    if (err) return res.status(500).json({ message: "Failed to fetch interests" });
+    res.json(results.map(r => r.tenant_id));
+  });
+});
+
 module.exports = router;

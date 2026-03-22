@@ -40,6 +40,7 @@ function Profile() {
     } catch(e) { console.error(e) } finally { setLoading(false) }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [])
 
   const onFinish = async (values) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
 import api from "../api/api"
@@ -11,14 +12,22 @@ function Leases() {
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
+  
+  const [searchParams] = useSearchParams()
+  const pId = searchParams.get("property_id")
+  const tId = searchParams.get("tenant_id")
 
   const load = async () => {
     try {
       const [l, p, t, u] = await Promise.all([api.get("/leases"), api.get("/properties"), api.get("/tenants"), api.get("/me")])
       setData(l.data); setProperties(p.data); setTenants(t.data); setUserCtx(u.data)
+      if (pId && tId) {
+        form.setFieldsValue({ propertyId: Number(pId), tenantId: Number(tId) })
+      }
     } catch(e){console.error(e)} finally{setLoading(false)}
   }
-  useEffect(() => { load() }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [pId, tId])
 
   const propertyOptions = properties.map(p => ({
     value: p.property_id,

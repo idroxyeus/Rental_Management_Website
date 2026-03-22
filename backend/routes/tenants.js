@@ -30,12 +30,27 @@ router.post("/", verifyToken, (req, res) => {
   );
 });
 
-// Get all tenants
+// Get all tenants (or filtered by property interest)
 router.get("/", verifyToken, (req, res) => {
-  db.query("SELECT * FROM tenants ORDER BY tenant_id DESC", (err, results) => {
-    if (err) return res.status(500).json({ message: "Failed to fetch tenants" });
-    res.json(results);
-  });
+  const interestedIn = req.query.interested_in;
+  if (interestedIn) {
+    db.query(
+      `SELECT t.* FROM tenants t 
+       JOIN property_interests pi ON t.tenant_id = pi.tenant_id 
+       WHERE pi.property_id = ? 
+       ORDER BY t.tenant_id DESC`,
+      [interestedIn],
+      (err, results) => {
+        if (err) return res.status(500).json({ message: "Failed to fetch interested tenants" });
+        res.json(results);
+      }
+    );
+  } else {
+    db.query("SELECT * FROM tenants ORDER BY tenant_id DESC", (err, results) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch tenants" });
+      res.json(results);
+    });
+  }
 });
 
 // Get single tenant with family members

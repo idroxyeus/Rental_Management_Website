@@ -35,7 +35,7 @@ function Complaints() {
 
   const onFinish = async (values) => {
     try {
-      const tenantId = userCtx?.user.role === "tenant" ? userCtx.tenant.tenant_id : values.tenantId;
+      const tenantId = userCtx?.user.role === "tenant" ? userCtx.tenant?.tenant_id : values.tenantId;
       if (editId) { await api.put(`/complaints/${editId}`, { description: values.description, status: values.status }) }
       else { await api.post("/complaints", { tenant_id: tenantId, property_id: values.propertyId, description: values.description, status: values.status || "open" }) }
       message.success(editId ? "Complaint updated!" : "Complaint filed!")

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useSearchParams, useNavigate } from "react-router-dom"
 import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, Drawer, Divider, Descriptions, message, Typography, Badge } from "antd"
 import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, EyeOutlined, UserOutlined } from "@ant-design/icons"
 import api from "../api/api"
@@ -11,6 +12,10 @@ function Tenants() {
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
 
+  const [searchParams] = useSearchParams()
+  const interestedIn = searchParams.get("interested_in")
+  const navigate = useNavigate()
+
   // Family drawer state
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedTenant, setSelectedTenant] = useState(null)
@@ -19,8 +24,14 @@ function Tenants() {
   const [familyEditId, setFamilyEditId] = useState(null)
   const [familyForm] = Form.useForm()
 
-  const load = async () => { try { setData((await api.get("/tenants")).data) } catch(e){console.error(e)} finally{setLoading(false)} }
-  useEffect(() => { load() }, [])
+  const load = async () => { 
+    try { 
+      const url = interestedIn ? `/tenants?interested_in=${interestedIn}` : "/tenants"
+      setData((await api.get(url)).data) 
+    } catch(e){console.error(e)} finally{setLoading(false)} 
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [interestedIn])
 
   // ── Tenant CRUD ──
   const onFinish = async (values) => {
@@ -94,7 +105,11 @@ function Tenants() {
     setFamilyMembers((await api.get(`/tenants/${selectedTenant.tenant_id}/family`)).data)
   }
 
-  const ic = { style: { width: "100%" } }
+
+
+  const createLease = (tenantId) => {
+    navigate(`/leases?property_id=${interestedIn}&tenant_id=${tenantId}`)
+  }
 
   const columns = [
     { title: "ID", dataIndex: "tenant_id", key: "id", width: 90, render: (v) => <Tag color="purple">T-{v}</Tag>, sorter: (a, b) => a.tenant_id - b.tenant_id },
@@ -104,9 +119,12 @@ function Tenants() {
     { title: "Aadhaar", dataIndex: "aadhaar_number", key: "aadhaar", render: (v) => v || <Text type="secondary">—</Text> },
     { title: "Occupation", dataIndex: "occupation", key: "occ", render: (v) => v || <Text type="secondary">—</Text> },
     {
-      title: "Actions", key: "actions", width: 160, align: "right",
+      title: "Actions", key: "actions", width: interestedIn ? 240 : 160, align: "right",
       render: (_, r) => (
         <Space>
+          {interestedIn && (
+            <Button type="primary" size="small" onClick={() => createLease(r.tenant_id)}>Create Lease</Button>
+          )}
           <Button type="text" icon={<TeamOutlined />} onClick={() => openFamily(r)} title="Family Members" />
           <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
           <Popconfirm title="Delete this tenant and all family data?" onConfirm={() => remove(r.tenant_id)}>
@@ -141,8 +159,9 @@ function Tenants() {
   return (
     <div>
       {/* Add / Edit Tenant Form */}
-      <Card title={editId ? `Edit Tenant T-${editId}` : "Add Tenant"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
-        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ gender: "male" }}>
+      {!interestedIn && (
+        <Card title={editId ? `Edit Tenant T-${editId}` : "Add Tenant"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+          <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ gender: "male" }}>
           <Divider orientation="left" plain><UserOutlined /> Personal Details</Divider>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             {!editId && <Form.Item name="user_id" label="User ID" rules={[{ required: true }]}><Input type="number" placeholder="Login user ID" /></Form.Item>}
@@ -177,9 +196,10 @@ function Tenants() {
           </Button>
         </Form>
       </Card>
+      )}
 
       {/* Tenants Table */}
-      <Card title="All Tenants">
+      <Card title={interestedIn ? `Interested Tenants for Property P-${interestedIn}` : "All Tenants"}>
         <Table dataSource={data} columns={columns} rowKey="tenant_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} tenants` }} size="middle"
           expandable={{

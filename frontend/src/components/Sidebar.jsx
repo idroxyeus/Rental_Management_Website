@@ -28,7 +28,8 @@ function Sidebar() {
 
       {/* Links */}
       <nav className="flex-1 px-4 pt-5 pb-4 space-y-1">
-        {navItems.map(({ path, label, icon: Icon }) => {
+        {navItems.map((item) => {
+          const { path, label, icon: Icon } = item;
           const active = pathname === path
           return (
             <Link key={path} to={path}

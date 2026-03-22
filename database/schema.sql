@@ -110,3 +110,14 @@ CREATE TABLE IF NOT EXISTS complaints (
   FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE,
   FOREIGN KEY (property_id) REFERENCES properties(property_id) ON DELETE CASCADE
 );
+
+-- Property Interests table
+CREATE TABLE IF NOT EXISTS property_interests (
+  interest_id INT AUTO_INCREMENT PRIMARY KEY,
+  property_id INT NOT NULL,
+  tenant_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (property_id) REFERENCES properties(property_id) ON DELETE CASCADE,
+  FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+  UNIQUE(property_id, tenant_id)
+);
