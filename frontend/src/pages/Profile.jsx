@@ -21,7 +21,7 @@ function Profile() {
           full_name: t.full_name, dob: t.date_of_birth?.split("T")[0],
           gender: t.gender, phone: t.phone_number, email: t.email,
           address: t.permanent_address, aadhaar: t.aadhaar_number, pan: t.pan_number,
-          id_proof: t.id_proof, occupation: t.occupation, income: t.income,
+          id_proof: t.id_proof, occupation: t.occupation, income: t.income, family_size: t.family_size,
           ec_name: t.emergency_contact_name, ec_phone: t.emergency_contact_phone,
         })
       } else if (res.data.user.role === "landlord" && res.data.landlord) {
@@ -50,7 +50,7 @@ function Profile() {
           full_name: values.full_name, date_of_birth: values.dob || null, gender: values.gender,
           phone_number: values.phone, email: values.email || null, permanent_address: values.address || null,
           aadhaar_number: values.aadhaar || null, pan_number: values.pan || null,
-          occupation: values.occupation || null, income: values.income || null,
+          occupation: values.occupation || null, income: values.income || null, family_size: values.family_size || 0,
           emergency_contact_name: values.ec_name || null, emergency_contact_phone: values.ec_phone || null,
           id_proof: values.id_proof || null, user_id: context.user.user_id
         }
@@ -83,6 +83,7 @@ function Profile() {
         <Form.Item name="email" label="Email"><Input /></Form.Item>
         <Form.Item name="occupation" label="Occupation"><Input /></Form.Item>
         <Form.Item name="income" label="Monthly Income (₹)"><Input type="number" /></Form.Item>
+        <Form.Item name="family_size" label="Family Members Staying"><Input type="number" min={0} /></Form.Item>
       </div>
       <Divider orientation="left" plain>📄 Verifications</Divider>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>

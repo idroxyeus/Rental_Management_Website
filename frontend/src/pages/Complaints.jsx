@@ -65,7 +65,24 @@ function Complaints() {
       filters: [{ text: "Open", value: "open" }, { text: "In Progress", value: "in_progress" }, { text: "Resolved", value: "resolved" }], onFilter: (v, r) => r.status === v },
   ]
 
-  if (userCtx?.user.role !== "tenant") {
+  const resolve = async (r) => {
+    try {
+      await api.put(`/complaints/${r.complaint_id}`, { description: r.description, status: "resolved" })
+      message.success("Complaint marked as resolved")
+      load()
+    } catch(e) { message.error("Failed to update status") }
+  }
+
+  if (userCtx?.user.role === "tenant") {
+    columns.push({
+      title: "Actions", key: "actions", width: 140, align: "right",
+      render: (_, r) => r.status !== "resolved" ? (
+        <Button size="small" type="primary" onClick={() => resolve(r)}>
+          Mark as Resolved
+        </Button>
+      ) : <Tag color="green">Resolved</Tag>
+    })
+  } else if (userCtx?.user.role !== "tenant") {
     columns.push({
       title: "Actions", key: "actions", width: 120, align: "right",
       render: (_, r) => (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Navigate, useNavigate, useLocation, Link } from "react-router-dom"
-import { Layout, Menu, Button, Typography, Avatar } from "antd"
+import { Layout, Menu, Button, Typography, Avatar, Tag, Space } from "antd"
 import {
   DashboardOutlined, HomeOutlined, TeamOutlined,
   FileTextOutlined, DollarOutlined, WarningOutlined,
@@ -120,14 +120,23 @@ function AppLayout({ children }) {
           }}
         >
           <Text strong style={{ fontSize: 18 }}>{pageTitles[pathname] || "Dashboard"}</Text>
-          <Button
-            icon={<LogoutOutlined />}
-            onClick={logout}
-            danger
-            type="text"
-          >
-            Logout
-          </Button>
+          <Space size="middle">
+            <span style={{ fontSize: 14 }}>
+              <Text type="secondary">Welcome, </Text>
+              <Text strong>{userCtx.user.name}</Text>
+            </span>
+            <Tag color={userCtx.user.role === "admin" ? "purple" : userCtx.user.role === "landlord" ? "volcano" : "cyan"} style={{ textTransform: "capitalize" }}>
+              {userCtx.user.role}
+            </Tag>
+            <Button
+              icon={<LogoutOutlined />}
+              onClick={logout}
+              danger
+              type="text"
+            >
+              Logout
+            </Button>
+          </Space>
         </Header>
 
         <Content style={{ padding: 24, background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>

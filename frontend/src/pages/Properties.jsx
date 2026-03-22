@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
+import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message, Descriptions, Drawer } from "antd"
 import { useNavigate } from "react-router-dom"
-import { PlusOutlined, EditOutlined, DeleteOutlined, HeartOutlined, EyeOutlined } from "@ant-design/icons"
+import { PlusOutlined, EditOutlined, DeleteOutlined, HeartOutlined, EyeOutlined, CheckOutlined } from "@ant-design/icons"
 import api from "../api/api"
 
 function Properties() {
@@ -11,6 +11,10 @@ function Properties() {
   const [editId, setEditId] = useState(null)
   const [form] = Form.useForm()
   const navigate = useNavigate()
+  
+  const [clickedInterests, setClickedInterests] = useState([])
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedProperty, setSelectedProperty] = useState(null)
 
   const load = async () => { 
     try { 
@@ -39,8 +43,11 @@ function Properties() {
     try {
       await api.post(`/properties/${id}/interest`)
       message.success("Interest sent to landlord!")
+      setClickedInterests(prev => [...prev, id])
     } catch(e) { message.error(e.response?.data?.message || "Failed to express interest") }
   }
+
+  const viewDetails = (r) => { setSelectedProperty(r); setDetailsOpen(true) }
 
   const columns = [
     { title: "Property ID", dataIndex: "property_id", key: "id", width: 110, render: (v) => <Tag color="blue">P-{v}</Tag>, sorter: (a, b) => a.property_id - b.property_id },
@@ -55,17 +62,18 @@ function Properties() {
     columns.push({
       title: "Actions", key: "actions", width: 150, align: "right",
       render: (_, r) => r.status === "vacant" ? (
-        <Button size="small" type="primary" icon={<HeartOutlined />} onClick={() => handleInterest(r.property_id)}>
-          I'm Interested
+        <Button size="small" type="primary" disabled={clickedInterests.includes(r.property_id)} icon={clickedInterests.includes(r.property_id) ? <CheckOutlined /> : <HeartOutlined />} onClick={() => handleInterest(r.property_id)}>
+          {clickedInterests.includes(r.property_id) ? "Interested" : "I'm Interested"}
         </Button>
       ) : null
     })
   } else if (userCtx?.user.role && userCtx.user.role !== "tenant") {
     columns.push({
-      title: "Actions", key: "actions", width: 220, align: "right",
+      title: "Actions", key: "actions", width: 280, align: "right",
       render: (_, r) => (
         <Space>
-          <Button size="small" onClick={() => navigate(`/tenants?interested_in=${r.property_id}`)} icon={<EyeOutlined />}>View Interested</Button>
+          <Button size="small" onClick={() => navigate(`/tenants?interested_in=${r.property_id}`)} icon={<HeartOutlined />}>Interests</Button>
+          <Button size="small" onClick={() => viewDetails(r)} icon={<EyeOutlined />}>View Details</Button>
           <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} />
           <Popconfirm title="Delete this property?" onConfirm={() => remove(r.property_id)}>
             <Button type="text" danger icon={<DeleteOutlined />} />
@@ -99,10 +107,35 @@ function Properties() {
         </Card>
       )}
 
+      {userCtx?.user.role === "tenant" && userCtx.activeLease && data.find(p => p.property_id === userCtx.activeLease.property_id) && (
+        <Card title="My Current Property" style={{ marginBottom: 24, boxShadow: "0 4px 12px rgba(0,0,0,0.05)", borderLeft: "4px solid #10b981" }}>
+          <Descriptions column={{ xxl: 4, xl: 3, lg: 3, md: 3, sm: 2, xs: 1 }} bordered>
+            <Descriptions.Item label="Property ID"><Tag color="blue">P-{userCtx.activeLease.property_id}</Tag></Descriptions.Item>
+            <Descriptions.Item label="Address" span={2}>{data.find(p => p.property_id === userCtx.activeLease.property_id).address}</Descriptions.Item>
+            <Descriptions.Item label="Type">{data.find(p => p.property_id === userCtx.activeLease.property_id).property_type}</Descriptions.Item>
+            <Descriptions.Item label="Rent">₹{userCtx.activeLease.rent_amount}</Descriptions.Item>
+            <Descriptions.Item label="Status"><Tag color="green">Occupied (By You)</Tag></Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
+
       <Card title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"}>
         <Table dataSource={data} columns={columns} rowKey="property_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} properties` }} size="middle" />
       </Card>
+
+      {/* Landlord View Details Drawer */}
+      <Drawer title={`Property Details: P-${selectedProperty?.property_id}`} open={detailsOpen} onClose={() => setDetailsOpen(false)} width={400}>
+        {selectedProperty && (
+          <Descriptions column={1} bordered>
+            <Descriptions.Item label="Property ID">P-{selectedProperty.property_id}</Descriptions.Item>
+            <Descriptions.Item label="Address">{selectedProperty.address}</Descriptions.Item>
+            <Descriptions.Item label="Type">{selectedProperty.property_type}</Descriptions.Item>
+            <Descriptions.Item label="Rent">₹{selectedProperty.rent_amount}</Descriptions.Item>
+            <Descriptions.Item label="Status"><Tag color={selectedProperty.status === "vacant" ? "green" : "orange"}>{selectedProperty.status}</Tag></Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
     </div>
   )
 }

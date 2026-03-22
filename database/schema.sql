@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   emergency_contact_phone VARCHAR(20),
   id_proof VARCHAR(100),
   income DECIMAL(10, 2),
+  family_size INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

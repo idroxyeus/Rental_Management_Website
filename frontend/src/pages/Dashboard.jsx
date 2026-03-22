@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Card, Row, Col, Statistic, Spin } from "antd"
+import { Card, Row, Col, Statistic, Spin, List, Tag } from "antd"
 import {
   HomeOutlined, TeamOutlined, FileTextOutlined,
   DollarOutlined, WarningOutlined,
@@ -17,6 +17,16 @@ const cards = [
   { key: "payments", title: "Payments", icon: <DollarOutlined />, color: "#f59e0b" },
   { key: "complaints", title: "Complaints", icon: <WarningOutlined />, color: "#ef4444" },
 ]
+
+function getNextPaymentDate(startDateStr) {
+  const start = new Date(startDateStr);
+  const now = new Date();
+  let nextDate = new Date(now.getFullYear(), now.getMonth(), start.getDate());
+  if (nextDate < now) {
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+  return nextDate.toISOString().split("T")[0];
+}
 
 function Dashboard() {
   const [userCtx, setUserCtx] = useState(null)
@@ -103,6 +113,18 @@ function Dashboard() {
                   </div>
                 </div>
               </Card>
+              <Card title="Upcoming Payment" bordered={false} style={{ marginTop: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ display: "block", color: "#8c8c8c" }}>Next Due Date</span>
+                    <strong style={{ fontSize: 16 }}>{getNextPaymentDate(l.start_date)}</strong>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ display: "block", color: "#8c8c8c" }}>Amount</span>
+                    <strong style={{ fontSize: 18, color: "#f59e0b" }}>₹{l.rent_amount}</strong>
+                  </div>
+                </div>
+              </Card>
             </Col>
             <Col xs={24} md={12}>
               <Card title="Recent Activity" bordered={false} style={{ height: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
@@ -156,11 +178,30 @@ function Dashboard() {
         ))}
       </Row>
 
-      <Card title="Analytics Overview" styles={{ body: { padding: 24 } }}>
-        <div style={{ height: 300 }}>
-          <Bar data={chartData} options={chartOpts} />
-        </div>
-      </Card>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card title="Recent Open Complaints" styles={{ body: { padding: 0 } }}>
+            {tenantStats.complaints && tenantStats.complaints.filter(c => c.status !== "resolved").length > 0 ? (
+              <List
+                dataSource={tenantStats.complaints.filter(c => c.status !== "resolved").slice(0, 5)}
+                renderItem={item => (
+                  <List.Item style={{ padding: "16px 24px" }}>
+                    <List.Item.Meta title={`Property P-${item.property_id}`} description={item.description} />
+                    <Tag color={item.status === 'open' ? 'red' : 'orange'}>{item.status.replace("_", " ")}</Tag>
+                  </List.Item>
+                )}
+              />
+            ) : <div style={{ padding: 24, textAlign: "center", color: "#bfbfbf" }}>No open complaints.</div>}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="Analytics Overview" styles={{ body: { padding: 24 } }}>
+            <div style={{ height: 250 }}>
+              <Bar data={chartData} options={chartOpts} />
+            </div>
+          </Card>
+        </Col>
+      </Row>
     </div>
   )
 }
