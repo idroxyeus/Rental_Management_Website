@@ -14,6 +14,7 @@ function Tenants() {
 
   const [searchParams] = useSearchParams()
   const interestedIn = searchParams.get("interested_in")
+  const propertyId = searchParams.get("property_id")
   const navigate = useNavigate()
 
   // Family drawer state
@@ -27,27 +28,41 @@ function Tenants() {
   const load = async () => { 
     try { 
       const url = interestedIn ? `/tenants?interested_in=${interestedIn}` : "/tenants"
-      setData((await api.get(url)).data) 
+      const [tRes, lRes] = await Promise.all([api.get(url), api.get("/leases")])
+      setData(tRes.data)
+      
+      if (propertyId) {
+        const activeLease = lRes.data.find(l => l.property_id === Number(propertyId) && l.status === "active")
+        if (activeLease) {
+          const tenant = tRes.data.find(t => t.tenant_id === activeLease.tenant_id)
+          if (tenant) {
+            setSelectedTenant(tenant); setDrawerOpen(true);
+            setFamilyMembers((await api.get(`/tenants/${tenant.tenant_id}/family`)).data)
+          }
+        }
+      }
     } catch(e){console.error(e)} finally{setLoading(false)} 
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [interestedIn])
+  useEffect(() => { load() }, [interestedIn, propertyId])
 
   // ── Tenant CRUD ──
   const onFinish = async (values) => {
+    const hide = message.loading("Saving tenant...", 0)
     try {
       const payload = {
-        full_name: values.full_name, date_of_birth: values.dob || null, gender: values.gender,
+        user_id: values.user_id, full_name: values.full_name, date_of_birth: values.dob || null, gender: values.gender,
         phone_number: values.phone, email: values.email || null, permanent_address: values.address || null,
-        aadhaar_number: values.aadhaar || null, pan_number: values.pan || null,
-        occupation: values.occupation || null, emergency_contact_name: values.ec_name || null,
-        emergency_contact_phone: values.ec_phone || null, id_proof: values.id_proof || null,
+        aadhaar_number: values.aadhaar || null, pan_number: values.pan || null, occupation: values.occupation || null,
+        income: values.income || null, emergency_contact_name: values.ec_name || null, emergency_contact_phone: values.ec_phone || null,
+        id_proof: null, family_size: values.family_size || 0
       }
       if (editId) { await api.put(`/tenants/${editId}`, payload) }
-      else { await api.post("/tenants", { ...payload, user_id: values.user_id }) }
+      else { await api.post("/tenants", payload) }
+      hide()
       message.success(editId ? "Tenant updated!" : "Tenant added!")
       form.resetFields(); setEditId(null); load()
-    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+    } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
   }
 
   const edit = (r) => {

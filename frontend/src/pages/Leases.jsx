@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
+import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message, Typography } from "antd"
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
 import api from "../api/api"
+
+const { Text } = Typography
 
 function Leases() {
   const [data, setData] = useState([])
@@ -43,36 +45,29 @@ function Leases() {
   const tenantMap = Object.fromEntries(tenants.map(t => [t.tenant_id, t]))
 
   const onFinish = async (values) => {
+    const hide = message.loading("Saving lease...", 0)
     try {
-      const payload = {
-        start_date: values.startDate, end_date: values.endDate,
-        rent_amount: values.rent, deposit: values.deposit || 0, status: values.status,
-      }
+      const payload = { property_id: values.propertyId, tenant_id: values.tenantId, start_date: values.start, end_date: values.end, rent_amount: values.rent, deposit: values.deposit, status: values.status }
       if (editId) { await api.put(`/leases/${editId}`, payload) }
-      else { await api.post("/leases", { ...payload, property_id: values.propertyId, tenant_id: values.tenantId }) }
+      else { await api.post("/leases", payload) }
+      hide()
       message.success(editId ? "Lease updated!" : "Lease created!")
       form.resetFields(); setEditId(null); load()
-    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+    } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
   }
 
-  const edit = (r) => {
-    setEditId(r.lease_id)
-    form.setFieldsValue({
-      propertyId: r.property_id, tenantId: r.tenant_id,
-      startDate: r.start_date?.split("T")[0], endDate: r.end_date?.split("T")[0],
-      rent: r.rent_amount, deposit: r.deposit, status: r.status,
-    })
-  }
+  const edit = (r) => { setEditId(r.lease_id); form.setFieldsValue({ propertyId: r.property_id, tenantId: r.tenant_id, start: r.start_date?.split("T")[0], end: r.end_date?.split("T")[0], rent: r.rent_amount, deposit: r.deposit, status: r.status }) }
   const cancel = () => { setEditId(null); form.resetFields() }
-  const remove = async (id) => { await api.delete(`/leases/${id}`); message.success("Deleted"); load() }
+  const remove = async (id) => { 
+    const hide = message.loading("Deleting...", 0)
+    await api.delete(`/leases/${id}`); hide(); message.success("Deleted"); load() 
+  }
 
   const statusColors = { active: "green", expired: "default", terminated: "red" }
 
   const columns = [
-    { title: "Lease ID", dataIndex: "lease_id", key: "id", width: 100, render: (v) => <Tag color="cyan">L-{v}</Tag>, sorter: (a, b) => a.lease_id - b.lease_id },
-    { title: "Property", dataIndex: "property_id", key: "prop", render: (id) => {
-      const p = propertyMap[id]; return p ? <span><Tag color="blue">P-{id}</Tag> {p.address}</span> : `#${id}`
-    }},
+    { title: "ID", dataIndex: "lease_id", key: "id", width: 90, render: (v) => <Tag color="cyan">L-{v}</Tag>, sorter: (a, b) => a.lease_id - b.lease_id },
+    { title: "Property", dataIndex: "property_id", key: "pid", render: (v) => <Text strong>{properties.find(p => p.property_id === v)?.address || `P-${v}`}</Text> },
     { title: "Tenant", dataIndex: "tenant_id", key: "tenant", render: (id) => {
       const t = tenantMap[id]; return t ? <span><Tag color="purple">T-{id}</Tag> {t.full_name}</span> : `#${id}`
     }},

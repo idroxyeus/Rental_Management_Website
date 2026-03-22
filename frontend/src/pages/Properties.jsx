@@ -26,25 +26,32 @@ function Properties() {
   useEffect(() => { load() }, [])
 
   const onFinish = async (values) => {
+    const hide = message.loading("Saving property...", 0)
     try {
       const payload = { address: values.address, property_type: values.type, rent_amount: values.rent, status: values.status }
       if (editId) { await api.put(`/properties/${editId}`, payload) }
       else { await api.post("/properties", payload) }
+      hide()
       message.success(editId ? "Property updated!" : "Property added!")
       form.resetFields(); setEditId(null); load()
-    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+    } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
   }
 
   const edit = (r) => { setEditId(r.property_id); form.setFieldsValue({ address: r.address, type: r.property_type, rent: r.rent_amount, status: r.status }) }
   const cancel = () => { setEditId(null); form.resetFields() }
-  const remove = async (id) => { await api.delete(`/properties/${id}`); message.success("Deleted"); load() }
+  const remove = async (id) => { 
+    const hide = message.loading("Deleting...", 0)
+    await api.delete(`/properties/${id}`); hide(); message.success("Deleted"); load() 
+  }
 
   const handleInterest = async (id) => {
+    const hide = message.loading("Expressing interest...", 0)
     try {
       await api.post(`/properties/${id}/interest`)
+      hide()
       message.success("Interest sent to landlord!")
       setClickedInterests(prev => [...prev, id])
-    } catch(e) { message.error(e.response?.data?.message || "Failed to express interest") }
+    } catch(e) { hide(); message.error(e.response?.data?.message || "Failed to express interest") }
   }
 
   const viewDetails = (r) => { setSelectedProperty(r); setDetailsOpen(true) }
@@ -120,7 +127,8 @@ function Properties() {
       )}
 
       <Card title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"}>
-        <Table dataSource={data} columns={columns} rowKey="property_id" loading={loading}
+        <Table dataSource={userCtx?.user.role === "tenant" ? data.filter(p => p.status === "vacant" || p.property_id === userCtx.activeLease?.property_id) : data} 
+          columns={columns} rowKey="property_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} properties` }} size="middle" />
       </Card>
 
@@ -134,6 +142,11 @@ function Properties() {
             <Descriptions.Item label="Rent">₹{selectedProperty.rent_amount}</Descriptions.Item>
             <Descriptions.Item label="Status"><Tag color={selectedProperty.status === "vacant" ? "green" : "orange"}>{selectedProperty.status}</Tag></Descriptions.Item>
           </Descriptions>
+        )}
+        {selectedProperty?.status === "occupied" && userCtx?.user.role !== "tenant" && (
+           <Button type="primary" style={{ marginTop: 16, width: "100%" }} onClick={() => navigate(`/tenants?property_id=${selectedProperty.property_id}`)}>
+             Update Family Members
+           </Button>
         )}
       </Drawer>
     </div>

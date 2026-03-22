@@ -3,12 +3,9 @@ import { Card, Row, Col, Statistic, Spin, List, Tag } from "antd"
 import {
   HomeOutlined, TeamOutlined, FileTextOutlined,
   DollarOutlined, WarningOutlined,
+  CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined
 } from "@ant-design/icons"
-import { Bar } from "react-chartjs-2"
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from "chart.js"
 import api from "../api/api"
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const cards = [
   { key: "properties", title: "Properties", icon: <HomeOutlined />, color: "#3b82f6" },
@@ -46,33 +43,29 @@ function Dashboard() {
           api.get("/properties"), api.get("/tenants"), api.get("/leases"),
           api.get("/payments"), api.get("/complaints"),
         ]).then(([p, t, l, pay, c]) => {
-          setStats({ properties: p.data.length, tenants: t.data.length, leases: l.data.length, payments: pay.data.length, complaints: c.data.length })
+          setStats({ 
+            properties: p.data.length, tenants: t.data.length, leases: l.data.length, payments: pay.data.length, complaints: c.data.length,
+            propertiesData: p.data, tenantsData: t.data, leasesData: l.data, paymentsData: pay.data 
+          })
+          setTenantStats({ complaints: c.data })
         }).finally(() => setLoading(false))
       }
     }).catch(console.error)
   }, [])
 
-  const chartData = {
-    labels: ["Properties", "Tenants", "Leases", "Payments", "Complaints"],
-    datasets: [{
-      label: "Count",
-      data: Object.values(stats),
-      backgroundColor: ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444"],
-      borderRadius: 8,
-      barThickness: 40,
-    }]
+  const computePnl = () => {
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    const expected = stats.leasesData?.filter(l => l.status === "active")?.reduce((sum, l) => sum + Number(l.rent_amount), 0) || 0;
+    const collected = stats.paymentsData?.filter(p => p.month === currentMonth && p.status === "paid")?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    return { expected, collected };
+  }
+  
+  const getRemainingDues = () => {
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    return stats.paymentsData?.filter(p => p.month === currentMonth && p.status !== "paid") || [];
   }
 
-  const chartOpts = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { color: "#8c8c8c" } },
-      x: { grid: { display: false }, ticks: { color: "#8c8c8c", font: { weight: 600 } } },
-    },
-  }
-
-  if (loading) return <div style={{ display: "flex", justifyContent: "center", paddingTop: 100 }}><Spin size="large" /></div>
+  if (loading) return <div style={{ textAlign: "center", marginTop: 100 }}><Spin size="large" /></div>
 
   // Tenant POV
   if (userCtx?.user.role === "tenant") {
@@ -195,9 +188,32 @@ function Dashboard() {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Analytics Overview" styles={{ body: { padding: 24 } }}>
-            <div style={{ height: 250 }}>
-              <Bar data={chartData} options={chartOpts} />
+          <Card title="Profit & Loss (Current Month)" styles={{ body: { padding: 24 } }} style={{ height: "100%" }}>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Statistic title="Expected Rent" value={`₹${computePnl().expected}`} valueStyle={{ color: '#10b981' }} />
+              </Col>
+              <Col span={12}>
+                <Statistic title="Collected Rent" value={`₹${computePnl().collected}`} valueStyle={{ color: '#3b82f6' }} />
+              </Col>
+            </Row>
+            <div style={{ marginTop: 24 }}>
+              <strong>Unpaid Dues This Month</strong>
+              <List
+                size="small"
+                style={{ marginTop: 8 }}
+                dataSource={getRemainingDues()}
+                renderItem={item => {
+                  const lease = stats.leasesData?.find(l => l.lease_id === item.lease_id);
+                  const t = stats.tenantsData?.find(x => x.tenant_id === lease?.tenant_id);
+                  const p = stats.propertiesData?.find(x => x.property_id === lease?.property_id);
+                  return (
+                    <List.Item extra={<Tag color="orange">₹{item.amount}</Tag>}>
+                      <List.Item.Meta title={t?.full_name || `T-${lease?.tenant_id}`} description={p?.address || `P-${lease?.property_id}`} />
+                    </List.Item>
+                  )
+                }}
+              />
             </div>
           </Card>
         </Col>

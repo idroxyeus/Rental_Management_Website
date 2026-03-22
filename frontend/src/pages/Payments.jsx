@@ -15,7 +15,11 @@ function Payments() {
 
   const load = async () => {
     try {
-      const [pay, l, p, t, u] = await Promise.all([api.get("/payments"), api.get("/leases"), api.get("/properties"), api.get("/tenants"), api.get("/me")])
+      const u = await api.get("/me")
+      if (u.data.user.role !== "tenant") {
+        await api.post("/payments/generate").catch(() => {})
+      }
+      const [pay, l, p, t] = await Promise.all([api.get("/payments"), api.get("/leases"), api.get("/properties"), api.get("/tenants")])
       setData(pay.data); setLeases(l.data); setProperties(p.data); setTenants(t.data); setUserCtx(u.data)
     } catch(e){console.error(e)} finally{setLoading(false)}
   }
@@ -35,13 +39,15 @@ function Payments() {
   const leaseMap = Object.fromEntries(leases.map(l => [l.lease_id, l]))
 
   const onFinish = async (values) => {
+    const hide = message.loading("Processing payment...", 0)
     try {
       const payload = { amount: values.amount, payment_date: values.date, month: values.month, status: values.status }
       if (editId) { await api.put(`/payments/${editId}`, payload) }
       else { await api.post("/payments", { ...payload, lease_id: values.leaseId }) }
+      hide()
       message.success(editId ? "Payment updated!" : "Payment recorded!")
       form.resetFields(); setEditId(null); load()
-    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+    } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
   }
 
   const edit = (r) => {
@@ -49,7 +55,10 @@ function Payments() {
     form.setFieldsValue({ leaseId: r.lease_id, amount: r.amount, date: r.payment_date?.split("T")[0], month: r.month, status: r.status })
   }
   const cancel = () => { setEditId(null); form.resetFields() }
-  const remove = async (id) => { await api.delete(`/payments/${id}`); message.success("Deleted"); load() }
+  const remove = async (id) => {
+    const hide = message.loading("Deleting...", 0)
+    await api.delete(`/payments/${id}`); hide(); message.success("Deleted"); load()
+  }
 
   const statusColors = { paid: "green", pending: "orange", overdue: "red" }
 
@@ -77,6 +86,16 @@ function Payments() {
           </Popconfirm>
         </Space>
       ),
+    })
+  } else {
+    columns.push({
+      title: "Actions", key: "actions", width: 120, align: "right",
+      render: (_, r) => r.status === 'pending' ? (
+        <Button size="small" type="primary" onClick={() => {
+           setEditId(r.payment_id);
+           form.setFieldsValue({ leaseId: r.lease_id, amount: r.amount, date: r.payment_date?.split("T")[0] || new Date().toISOString().split("T")[0], month: r.month, status: "paid" });
+        }}>Pay Now</Button>
+      ) : null
     })
   }
 

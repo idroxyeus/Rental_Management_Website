@@ -5,8 +5,9 @@ import api from "../api/api"
 
 function Complaints() {
   const [data, setData] = useState([])
-  const [tenants, setTenants] = useState([])
   const [properties, setProperties] = useState([])
+  const [tenants, setTenants] = useState([])
+  const [leases, setLeases] = useState([])
   const [userCtx, setUserCtx] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
@@ -14,41 +15,46 @@ function Complaints() {
 
   const load = async () => {
     try {
-      const [c, t, p, u] = await Promise.all([api.get("/complaints"), api.get("/tenants"), api.get("/properties"), api.get("/me")])
-      setData(c.data); setTenants(t.data); setProperties(p.data); setUserCtx(u.data)
-    } catch(e){console.error(e)} finally{setLoading(false)}
+      const [c, p, t, u, l] = await Promise.all([api.get("/complaints"), api.get("/properties"), api.get("/tenants"), api.get("/me"), api.get("/leases")])
+      setData(c.data); setProperties(p.data); setTenants(t.data); setUserCtx(u.data); setLeases(l.data)
+    } catch(e){console.error(e)} finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
 
-  const tenantOptions = tenants.map(t => ({
-    value: t.tenant_id,
-    label: `T-${t.tenant_id}  •  ${t.full_name}  (${t.phone_number})`,
-  }))
+  const propertyOptions = properties.map(p => ({ value: p.property_id, label: `P-${p.property_id} - ${p.address}` }))
+  const tenantOptions = tenants.map(t => ({ value: t.tenant_id, label: `T-${t.tenant_id} - ${t.full_name}` }))
 
-  const propertyOptions = properties.map(p => ({
-    value: p.property_id,
-    label: `P-${p.property_id}  •  ${p.address}  (${p.property_type})`,
-  }))
+  const selectedPropertyId = Form.useWatch("propertyId", form)
+  const activeLease = leases.find(l => l.property_id === selectedPropertyId && l.status === "active")
+  const dynamicTenantOpts = activeLease ? tenantOptions.filter(t => t.value === activeLease.tenant_id) : tenantOptions
+
+  useEffect(() => {
+    if (activeLease && form.getFieldValue("tenantId") !== activeLease.tenant_id) {
+      form.setFieldsValue({ tenantId: activeLease.tenant_id })
+    }
+  }, [selectedPropertyId, activeLease, form])
 
   const tenantMap = Object.fromEntries(tenants.map(t => [t.tenant_id, t]))
   const propMap = Object.fromEntries(properties.map(p => [p.property_id, p]))
 
   const onFinish = async (values) => {
+    const hide = message.loading("Saving complaint...", 0)
     try {
       const tenantId = userCtx?.user.role === "tenant" ? userCtx.tenant?.tenant_id : values.tenantId;
       if (editId) { await api.put(`/complaints/${editId}`, { description: values.description, status: values.status }) }
       else { await api.post("/complaints", { tenant_id: tenantId, property_id: values.propertyId, description: values.description, status: values.status || "open" }) }
-      message.success(editId ? "Complaint updated!" : "Complaint filed!")
+      hide()
+      message.success(editId ? "Complaint updated!" : "Complaint submitted!")
       form.resetFields(); setEditId(null); load()
-    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+    } catch (err) { hide(); message.error(err.response?.data?.message || "Failed to submit request") }
   }
 
-  const edit = (r) => {
-    setEditId(r.complaint_id)
-    form.setFieldsValue({ tenantId: r.tenant_id, propertyId: r.property_id, description: r.description, status: r.status })
-  }
+  const edit = (r) => { setEditId(r.complaint_id); form.setFieldsValue({ propertyId: r.property_id, tenantId: r.tenant_id, description: r.description, status: r.status }) }
   const cancel = () => { setEditId(null); form.resetFields() }
-  const remove = async (id) => { await api.delete(`/complaints/${id}`); message.success("Deleted"); load() }
+  const remove = async (id) => {
+    const hide = message.loading("Deleting...", 0)
+    await api.delete(`/complaints/${id}`); hide(); message.success("Deleted"); load()
+  }
 
   const statusColors = { open: "orange", in_progress: "blue", resolved: "green" }
 
@@ -66,11 +72,13 @@ function Complaints() {
   ]
 
   const resolve = async (r) => {
+    const hide = message.loading("Marking resolved...", 0)
     try {
       await api.put(`/complaints/${r.complaint_id}`, { description: r.description, status: "resolved" })
+      hide()
       message.success("Complaint marked as resolved")
       load()
-    } catch(e) { message.error("Failed to update status") }
+    } catch(e) { hide(); message.error("Failed to update status") }
   }
 
   if (userCtx?.user.role === "tenant") {
@@ -101,18 +109,16 @@ function Complaints() {
       <Card title={editId ? `Edit Complaint C-${editId}` : "File Complaint"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "open" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-            {userCtx?.user.role !== "tenant" && (
-              <Form.Item name="tenantId" label="Select Tenant" rules={[{ required: !editId, message: "Pick a tenant" }]}>
-                <Select placeholder="Search tenants..." showSearch disabled={!!editId}
-                  optionFilterProp="label" options={tenantOptions}
-                  notFoundContent="No tenants available" />
-              </Form.Item>
-            )}
             <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
               <Select placeholder="Search properties..." showSearch disabled={!!editId}
                 optionFilterProp="label" options={propertyOptions}
                 notFoundContent="No properties available" />
             </Form.Item>
+            {userCtx?.user.role !== "tenant" && (
+              <Form.Item name="tenantId" label="Tenant" rules={[{ required: true, message: "Pick a tenant" }]}>
+                <Select placeholder="Select tenant" options={dynamicTenantOpts} disabled={!!activeLease || !!editId} />
+              </Form.Item>
+            )}
             <Form.Item name="description" label="Description" rules={[{ required: true }]}>
               <Input.TextArea placeholder="Water leakage in kitchen, broken AC..." rows={1} />
             </Form.Item>

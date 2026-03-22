@@ -65,4 +65,39 @@ router.delete("/:id", verifyToken, (req, res) => {
   });
 });
 
+// Auto-generate missing payments for the current month
+router.post("/generate", verifyToken, (req, res) => {
+  if (req.user.role === "tenant") return res.status(403).json({ message: "Not authorized" });
+  
+  const currentMonth = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+  
+  db.query("SELECT * FROM leases WHERE status = 'active'", (err, leases) => {
+    if (err) return res.status(500).json({ message: "Failed to fetch leases" });
+    if (!leases.length) return res.json({ message: "No active leases to bill" });
+    
+    // Check existing payments for this month
+    db.query("SELECT lease_id FROM payments WHERE month = ?", [currentMonth], (err, existing) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch pending payments" });
+      
+      const existingLeaseIds = new Set(existing.map(p => p.lease_id));
+      const newPayments = leases.filter(l => !existingLeaseIds.has(l.lease_id));
+      
+      if (!newPayments.length) return res.json({ message: "All bills generated for this month" });
+      
+      const values = newPayments.map(l => [
+        l.lease_id, l.rent_amount, new Date().toISOString().split("T")[0], currentMonth, "pending"
+      ]);
+      
+      db.query(
+        "INSERT INTO payments (lease_id, amount, payment_date, month, status) VALUES ?",
+        [values],
+        (err, result) => {
+          if (err) return res.status(500).json({ message: "Failed to generate bills" });
+          res.status(201).json({ message: `Generated ${result.affectedRows} pending bills.` });
+        }
+      );
+    });
+  });
+});
+
 module.exports = router;

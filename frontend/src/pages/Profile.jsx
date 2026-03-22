@@ -44,6 +44,7 @@ function Profile() {
   useEffect(() => { load() }, [])
 
   const onFinish = async (values) => {
+    const hide = message.loading("Saving profile...", 0)
     try {
       if (context.user.role === "tenant") {
         const payload = {
@@ -64,11 +65,10 @@ function Profile() {
         if (context.landlord) await api.put(`/landlords/${context.landlord.landlord_id}`, payload)
         else await api.post("/landlords", payload)
       }
+      hide()
       message.success("Profile saved successfully!")
       load()
-    } catch (err) {
-      message.error(err.response?.data?.message || "Failed to save profile")
-    }
+    } catch (e) { hide(); message.error(e.response?.data?.message || "Failed to save profile") }
   }
 
   // Tenant form
