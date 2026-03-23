@@ -17,10 +17,24 @@ function App() {
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: "#4f46e5",
-          borderRadius: 8,
+          colorPrimary: "#6366f1",
+          colorInfo: "#3b82f6",
+          colorSuccess: "#10b981",
+          colorWarning: "#f59e0b",
+          colorError: "#ef4444",
+          borderRadius: 12,
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         },
+        components: {
+          Card: {
+            boxShadowTertiary: "0 10px 40px -10px rgba(0,0,0,0.08)",
+            borderRadiusLG: 16,
+          },
+          Button: {
+            controlHeight: 40,
+            borderRadius: 8,
+          },
+        }
       }}
     >
       <BrowserRouter>

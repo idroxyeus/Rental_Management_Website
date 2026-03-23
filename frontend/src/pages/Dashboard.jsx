@@ -84,10 +84,10 @@ function Dashboard() {
             <p>You currently do not have a property assigned to you. Browse Properties to find your next home.</p>
           </Card>
         ) : (
-          <Row gutter={[16, 16]}>
+          <Row gutter={[24, 24]}>
             <Col xs={24} md={12}>
-              <Card title="My Active Lease" bordered={false} style={{ height: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Card title="My Active Lease" bordered={false} className="card-gradient-tenant" style={{ height: "100%" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "#8c8c8c" }}>Status</span>
                     <span style={{ color: "#52c41a", fontWeight: "bold" }}>ACTIVE</span>
@@ -106,7 +106,7 @@ function Dashboard() {
                   </div>
                 </div>
               </Card>
-              <Card title="Upcoming Payment" bordered={false} style={{ marginTop: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+              <Card title="Upcoming Payment" bordered={false} style={{ marginTop: 24 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <span style={{ display: "block", color: "#8c8c8c" }}>Next Due Date</span>
@@ -120,8 +120,8 @@ function Dashboard() {
               </Card>
             </Col>
             <Col xs={24} md={12}>
-              <Card title="Recent Activity" bordered={false} style={{ height: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-                <div style={{ marginBottom: 16 }}>
+              <Card title="Recent Activity" bordered={false} style={{ height: "100%" }}>
+                <div style={{ marginBottom: 24 }}>
                   <span style={{ display: "block", color: "#8c8c8c", marginBottom: 4 }}>Recent Payments</span>
                   {tenantStats.payments.slice(0, 2).map(p => (
                     <div key={p.payment_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
@@ -152,10 +152,10 @@ function Dashboard() {
   // Admin / Landlord POV
   return (
     <div>
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
         {cards.map(({ key, title, icon, color }) => (
           <Col key={key} xs={24} sm={12} lg={8} xl={4}>
-            <Card hoverable styles={{ body: { padding: 20 } }}>
+            <Card hoverable styles={{ body: { padding: 24 } }} className="hover-scale glass-card">
               <Statistic
                 title={title}
                 value={stats[key]}
@@ -171,7 +171,7 @@ function Dashboard() {
         ))}
       </Row>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[24, 24]}>
         <Col xs={24} lg={12}>
           <Card title="Recent Open Complaints" styles={{ body: { padding: 0 } }}>
             {tenantStats.complaints && tenantStats.complaints.filter(c => c.status !== "resolved").length > 0 ? (
@@ -188,8 +188,8 @@ function Dashboard() {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Profit & Loss (Current Month)" styles={{ body: { padding: 24 } }} style={{ height: "100%" }}>
-            <Row gutter={16}>
+          <Card className="glass-card" title="Profit & Loss (Current Month)" styles={{ body: { padding: 32 } }} style={{ height: "100%" }}>
+            <Row gutter={24}>
               <Col span={12}>
                 <Statistic title="Expected Rent" value={`₹${computePnl().expected}`} valueStyle={{ color: '#10b981' }} />
               </Col>

@@ -121,7 +121,7 @@ function Profile() {
   // Admins do not need a profile form for now
   if (context.user.role === "admin") {
     return (
-      <Card title="Admin Profile" style={{ maxWidth: 600, margin: "0 auto" }}>
+      <Card className="glass-card" title="Admin Profile" style={{ maxWidth: 600, margin: "0 auto" }}>
         <Text>You are logged in as an Administrator.</Text>
       </Card>
     )
@@ -129,7 +129,7 @@ function Profile() {
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <Card title={
+      <Card className="glass-card" title={
         <div>
           <Title level={4} style={{ margin: 0 }}>My Profile</Title>
           <Text type="secondary">Manage your {context.user.role} information.</Text>

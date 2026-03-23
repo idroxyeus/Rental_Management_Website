@@ -101,7 +101,7 @@ function Payments() {
 
   return (
     <div>
-      <Card title={editId ? `Edit Payment PAY-${editId}` : "Record Payment"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+      <Card className="glass-card" title={editId ? `Edit Payment PAY-${editId}` : "Record Payment"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 24 }}>
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "pending" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             <Form.Item name="leaseId" label="Select Lease" rules={[{ required: !editId, message: "Pick a lease" }]}>
@@ -122,7 +122,7 @@ function Payments() {
         </Form>
       </Card>
 
-      <Card title={userCtx?.user.role === "tenant" ? "My Payment History" : "All Payments"}>
+      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "My Payment History" : "All Payments"}>
         <Table dataSource={data} columns={columns} rowKey="payment_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} payments` }} size="middle" scroll={{ x: 800 }} />
       </Card>

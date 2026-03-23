@@ -93,7 +93,7 @@ function Properties() {
   return (
     <div>
       {userCtx?.user.role !== "tenant" && (
-        <Card title={editId ? `Edit Property P-${editId}` : "Add Property"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+        <Card className="glass-card" title={editId ? `Edit Property P-${editId}` : "Add Property"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 24 }}>
           <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "vacant" }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
               <Form.Item name="address" label="Address" rules={[{ required: true }]}><Input placeholder="123 Main St" /></Form.Item>
@@ -126,7 +126,7 @@ function Properties() {
         </Card>
       )}
 
-      <Card title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"}>
+      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"}>
         <Table dataSource={userCtx?.user.role === "tenant" ? data.filter(p => p.status === "vacant" || p.property_id === userCtx.activeLease?.property_id) : data} 
           columns={columns} rowKey="property_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} properties` }} size="middle" />

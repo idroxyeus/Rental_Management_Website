@@ -175,7 +175,7 @@ function Tenants() {
     <div>
       {/* Add / Edit Tenant Form */}
       {!interestedIn && (
-        <Card title={editId ? `Edit Tenant T-${editId}` : "Add Tenant"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+        <Card className="glass-card" title={editId ? `Edit Tenant T-${editId}` : "Add Tenant"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 24 }}>
           <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ gender: "male" }}>
           <Divider orientation="left" plain><UserOutlined /> Personal Details</Divider>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
@@ -214,7 +214,7 @@ function Tenants() {
       )}
 
       {/* Tenants Table */}
-      <Card title={interestedIn ? `Interested Tenants for Property P-${interestedIn}` : "All Tenants"}>
+      <Card className="glass-card" title={interestedIn ? `Interested Tenants for Property P-${interestedIn}` : "All Tenants"}>
         <Table dataSource={data} columns={columns} rowKey="tenant_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} tenants` }} size="middle"
           expandable={{
@@ -240,7 +240,7 @@ function Tenants() {
         open={drawerOpen} onClose={() => { setDrawerOpen(false); setFamilyEditId(null); familyForm.resetFields() }}
         width={700} placement="right"
       >
-        <Card title={familyEditId ? "Edit Family Member" : "Add Family Member"} size="small" style={{ marginBottom: 16 }}
+        <Card className="glass-card" title={familyEditId ? "Edit Family Member" : "Add Family Member"} size="small" style={{ marginBottom: 24 }}
           extra={familyEditId && <Button size="small" onClick={() => { setFamilyEditId(null); familyForm.resetFields() }}>Cancel</Button>}>
           <Form form={familyForm} layout="vertical" onFinish={addFamily} initialValues={{ fm_gender: "male" }} size="small">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

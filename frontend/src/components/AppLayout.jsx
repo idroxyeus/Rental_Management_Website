@@ -64,7 +64,9 @@ function AppLayout({ children }) {
         onCollapse={setCollapsed}
         width={220}
         style={{
-          background: "linear-gradient(180deg, #1e1b4b 0%, #312e81 100%)",
+          background: "radial-gradient(circle at top left, #1e1b4b 0%, #0f172a 100%)",
+          borderRight: "1px solid rgba(255,255,255,0.05)",
+          boxShadow: "4px 0 24px rgba(0,0,0,0.2)",
           overflow: "auto",
           height: "100vh",
           position: "fixed",
@@ -77,7 +79,7 @@ function AppLayout({ children }) {
       >
         <div style={{ padding: collapsed ? "20px 12px" : "20px 20px", display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar
-            style={{ backgroundColor: "#6366f1", fontWeight: 700, fontSize: 18, flexShrink: 0 }}
+            style={{ backgroundColor: "#818cf8", fontWeight: 700, fontSize: 18, flexShrink: 0, boxShadow: "0 4px 12px rgba(99,102,241,0.4)" }}
             size={collapsed ? 36 : 40}
           >
             R
@@ -107,25 +109,28 @@ function AppLayout({ children }) {
       <Layout style={{ marginLeft: collapsed ? 80 : 220, transition: "margin-left 0.2s" }}>
         <Header
           style={{
-            background: "#fff",
+            background: "rgba(255, 255, 255, 0.7)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
             padding: "0 28px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: "1px solid rgba(0,0,0,0.04)",
+            boxShadow: "0 4px 30px rgba(0,0,0,0.03)",
             position: "sticky",
             top: 0,
             zIndex: 40,
-            height: 64,
+            height: 72,
           }}
         >
-          <Text strong style={{ fontSize: 18 }}>{pageTitles[pathname] || "Dashboard"}</Text>
-          <Space size="middle">
+          <Text strong style={{ fontSize: 20, letterSpacing: "-0.5px" }}>{pageTitles[pathname] || "Dashboard"}</Text>
+          <Space size="large">
             <span style={{ fontSize: 14 }}>
               <Text type="secondary">Welcome, </Text>
               <Text strong>{userCtx.user.name}</Text>
             </span>
-            <Tag color={userCtx.user.role === "admin" ? "purple" : userCtx.user.role === "landlord" ? "volcano" : "cyan"} style={{ textTransform: "capitalize" }}>
+            <Tag color={userCtx.user.role === "admin" ? "purple" : userCtx.user.role === "landlord" ? "volcano" : "cyan"} style={{ textTransform: "capitalize", borderRadius: 4, padding: "2px 8px" }}>
               {userCtx.user.role}
             </Tag>
             <Button
@@ -133,13 +138,14 @@ function AppLayout({ children }) {
               onClick={logout}
               danger
               type="text"
+              style={{ fontWeight: 500 }}
             >
               Logout
             </Button>
           </Space>
         </Header>
 
-        <Content style={{ padding: 24, background: "#f5f5f5", minHeight: "calc(100vh - 64px)" }}>
+        <Content style={{ padding: "32px 32px", background: "#f8fafc", minHeight: "calc(100vh - 72px)" }}>
           {children}
         </Content>
       </Layout>

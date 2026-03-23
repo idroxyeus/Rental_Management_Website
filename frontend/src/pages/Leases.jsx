@@ -94,7 +94,7 @@ function Leases() {
   return (
     <div>
       {userCtx?.user.role !== "tenant" && (
-        <Card title={editId ? `Edit Lease L-${editId}` : "Create Lease"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+        <Card className="glass-card" title={editId ? `Edit Lease L-${editId}` : "Create Lease"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 24 }}>
           <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "active" }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
               <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
@@ -120,7 +120,7 @@ function Leases() {
         </Card>
       )}
 
-      <Card title={userCtx?.user.role === "tenant" ? "My Active Leases" : "All Leases"}>
+      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "My Active Leases" : "All Leases"}>
         <Table dataSource={data} columns={columns} rowKey="lease_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} leases` }} size="middle" scroll={{ x: 900 }} />
       </Card>

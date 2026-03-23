@@ -106,7 +106,7 @@ function Complaints() {
 
   return (
     <div>
-      <Card title={editId ? `Edit Complaint C-${editId}` : "File Complaint"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 16 }}>
+      <Card className="glass-card" title={editId ? `Edit Complaint C-${editId}` : "File Complaint"} extra={editId && <Button onClick={cancel}>Cancel</Button>} style={{ marginBottom: 24 }}>
         <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: "open" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
             <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
@@ -132,7 +132,7 @@ function Complaints() {
         </Form>
       </Card>
 
-      <Card title={userCtx?.user.role === "tenant" ? "My Complaints" : "All Complaints"}>
+      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "My Complaints" : "All Complaints"}>
         <Table dataSource={data} columns={columns} rowKey="complaint_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} complaints` }} size="middle" scroll={{ x: 700 }} />
       </Card>
