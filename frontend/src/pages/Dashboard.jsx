@@ -48,11 +48,11 @@ function Dashboard() {
       } else {
         Promise.all([
           api.get("/properties"), api.get("/tenants"), api.get("/leases"),
-          api.get("/payments"), api.get("/complaints"),
-        ]).then(([p, t, l, pay, c]) => {
+          api.get("/payments"), api.get("/complaints"), api.get("/expenses")
+        ]).then(([p, t, l, pay, c, exp]) => {
           setStats({ 
             properties: p.data.length, tenants: t.data.length, leases: l.data.length, payments: pay.data.length, complaints: c.data.length,
-            propertiesData: p.data, tenantsData: t.data, leasesData: l.data, paymentsData: pay.data 
+            propertiesData: p.data, tenantsData: t.data, leasesData: l.data, paymentsData: pay.data, expensesData: exp.data 
           })
           setTenantStats({ complaints: c.data })
         }).finally(() => setLoading(false))
@@ -64,13 +64,15 @@ function Dashboard() {
     const currentMonth = new Date().toISOString().substring(0, 7);
     const expected = stats.leasesData?.filter(l => l.status === "active")?.reduce((sum, l) => sum + Number(l.rent_amount), 0) || 0;
     const collected = stats.paymentsData?.filter(p => p.month === currentMonth && p.status === "paid")?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-    return { expected, collected };
+    const currentExpenses = stats.expensesData?.filter(e => e.expense_date.startsWith(currentMonth))?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+    return { expected, collected, currentExpenses, netProfit: collected - currentExpenses };
   }
   
   const getChartData = () => {
     // Basic past 6 months aggregation
     const months = [];
     const incomeData = [];
+    const expenseData = [];
     const date = new Date();
     for(let i=5; i>=0; i--) {
       const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
@@ -78,6 +80,8 @@ function Dashboard() {
       months.push(d.toLocaleString('default', { month: 'short' }));
       const monthIncome = stats.paymentsData?.filter(p => p.month === monthStr && p.status === "paid")?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
       incomeData.push(monthIncome);
+      const monthExpense = stats.expensesData?.filter(e => e.expense_date.startsWith(monthStr))?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      expenseData.push(monthExpense);
     }
     return {
       labels: months,
@@ -90,6 +94,15 @@ function Dashboard() {
           borderColor: 'rgba(99, 102, 241, 1)',
           tension: 0.4,
           pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+        },
+        {
+          label: 'Expenses (₹)',
+          data: expenseData,
+          fill: true,
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          borderColor: 'rgba(239, 68, 68, 1)',
+          tension: 0.4,
+          pointBackgroundColor: 'rgba(239, 68, 68, 1)',
         }
       ]
     }
@@ -229,8 +242,9 @@ function Dashboard() {
                 data={getChartData()} 
                 options={{ 
                   responsive: true, maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" } }, x: { grid: { display: false } } }
+                  plugins: { legend: { display: true, position: 'top' } },
+                  scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" } }, x: { grid: { display: false } } },
+                  interaction: { mode: 'index', intersect: false }
                 }} 
               />
             </div>
@@ -242,13 +256,19 @@ function Dashboard() {
         <Col xs={24} lg={12}>
           <Card className="glass-card" title="Profit & Loss (Current Month)" styles={{ body: { padding: 32 } }} style={{ height: "100%" }}>
             <Row gutter={24}>
-              <Col span={12}>
-                <Statistic title="Expected Rent" value={`₹${computePnl().expected}`} valueStyle={{ color: '#10b981' }} />
+              <Col span={8}>
+                <Statistic title="Expected Rent" value={`₹${computePnl().expected}`} valueStyle={{ color: '#10b981', fontSize: 20 }} />
               </Col>
-              <Col span={12}>
-                <Statistic title="Collected Rent" value={`₹${computePnl().collected}`} valueStyle={{ color: '#3b82f6' }} />
+              <Col span={8}>
+                <Statistic title="Collected Rent" value={`₹${computePnl().collected}`} valueStyle={{ color: '#3b82f6', fontSize: 20 }} />
+              </Col>
+              <Col span={8}>
+                <Statistic title="Expenses" value={`₹${computePnl().currentExpenses}`} valueStyle={{ color: '#ef4444', fontSize: 20 }} />
               </Col>
             </Row>
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px dashed #e2e8f0" }}>
+               <Statistic title={<span className="text-slate-500 font-bold uppercase tracking-wider text-xs">Net Profit This Month</span>} value={`₹${computePnl().netProfit}`} valueStyle={{ color: computePnl().netProfit >= 0 ? '#10b981' : '#ef4444', fontSize: 28, fontWeight: 800 }} />
+            </div>
             <div style={{ marginTop: 24 }}>
               <strong>Unpaid Dues This Month</strong>
               <List

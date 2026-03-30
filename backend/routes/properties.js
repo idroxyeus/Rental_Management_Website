@@ -5,15 +5,15 @@ const verifyToken = require("../middleware/auth");
 
 // Create property
 router.post("/", verifyToken, (req, res) => {
-  const { address, property_type, rent_amount, status } = req.body;
+  const { address, property_type, rent_amount, status, image_url } = req.body;
 
   if (!address || !property_type || !rent_amount) {
     return res.status(400).json({ message: "Address, type and rent amount are required" });
   }
 
   db.query(
-    "INSERT INTO properties (address, property_type, rent_amount, status) VALUES (?, ?, ?, ?)",
-    [address, property_type, rent_amount, status || "vacant"],
+    "INSERT INTO properties (address, property_type, rent_amount, status, image_url) VALUES (?, ?, ?, ?, ?)",
+    [address, property_type, rent_amount, status || "vacant", image_url || null],
     (err, result) => {
       if (err) return res.status(500).json({ message: "Failed to create property" });
       res.status(201).json({ property_id: result.insertId, message: "Property created" });
@@ -47,11 +47,11 @@ router.get("/:id", verifyToken, (req, res) => {
 
 // Update property
 router.put("/:id", verifyToken, (req, res) => {
-  const { address, property_type, rent_amount, status } = req.body;
+  const { address, property_type, rent_amount, status, image_url } = req.body;
 
   db.query(
-    "UPDATE properties SET address = ?, property_type = ?, rent_amount = ?, status = ? WHERE property_id = ?",
-    [address, property_type, rent_amount, status, req.params.id],
+    "UPDATE properties SET address = ?, property_type = ?, rent_amount = ?, status = ?, image_url = ? WHERE property_id = ?",
+    [address, property_type, rent_amount, status, image_url || null, req.params.id],
     (err, result) => {
       if (err) return res.status(500).json({ message: "Failed to update property" });
       if (result.affectedRows === 0) return res.status(404).json({ message: "Property not found" });

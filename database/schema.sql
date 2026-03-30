@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS properties (
   property_type VARCHAR(50) NOT NULL,
   rent_amount DECIMAL(10, 2) NOT NULL,
   status ENUM('vacant', 'occupied') DEFAULT 'vacant',
+  image_url VARCHAR(500) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -109,6 +110,18 @@ CREATE TABLE IF NOT EXISTS complaints (
   status ENUM('open', 'in_progress', 'resolved') DEFAULT 'open',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+  FOREIGN KEY (property_id) REFERENCES properties(property_id) ON DELETE CASCADE
+);
+
+-- Expenses table (Landlord Expense Tracking)
+CREATE TABLE IF NOT EXISTS expenses (
+  expense_id INT AUTO_INCREMENT PRIMARY KEY,
+  property_id INT NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  description TEXT,
+  expense_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (property_id) REFERENCES properties(property_id) ON DELETE CASCADE
 );
 

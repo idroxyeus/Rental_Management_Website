@@ -16,6 +16,7 @@ app.use("/landlords", require("./routes/landlords"));
 app.use("/leases", require("./routes/leases"));
 app.use("/payments", require("./routes/payments"));
 app.use("/complaints", require("./routes/complaints"));
+app.use("/expenses", require("./routes/expenses"));
 
 // Global error handler
 app.use((err, req, res, next) => {

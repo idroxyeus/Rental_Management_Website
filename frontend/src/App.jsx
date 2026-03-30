@@ -11,6 +11,7 @@ import Complaints from "./pages/Complaints"
 import Profile from "./pages/Profile"
 import AppLayout from "./components/AppLayout"
 import Landing from "./pages/Landing"
+import Expenses from "./pages/Expenses"
 import { ThemeProvider, useTheme } from "./context/ThemeContext"
 
 function MainApp() {
@@ -53,6 +54,7 @@ function MainApp() {
           <Route path="/leases" element={<AppLayout><Leases /></AppLayout>} />
           <Route path="/payments" element={<AppLayout><Payments /></AppLayout>} />
           <Route path="/complaints" element={<AppLayout><Complaints /></AppLayout>} />
+          <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
         </Routes>
       </BrowserRouter>
     </ConfigProvider>
