@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
 import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, Drawer, Divider, Descriptions, message, Typography, Badge } from "antd"
-import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, EyeOutlined, UserOutlined } from "@ant-design/icons"
+import { PlusOutlined, EditOutlined, DeleteOutlined, TeamOutlined, EyeOutlined, UserOutlined, DownloadOutlined } from "@ant-design/icons"
 import api from "../api/api"
 
 const { Title, Text } = Typography
@@ -126,6 +126,19 @@ function Tenants() {
     navigate(`/leases?property_id=${interestedIn}&tenant_id=${tenantId}`)
   }
 
+  const exportCSV = () => {
+    const headers = ["ID", "Name", "Phone", "Gender", "Aadhaar", "Occupation", "Email"];
+    const csvData = data.map(t => [
+      t.tenant_id, `"${t.full_name || ''}"`, t.phone_number, t.gender, t.aadhaar_number, `"${t.occupation || ''}"`, t.email
+    ]);
+    const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `tenants_export_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+  }
+
   const columns = [
     { title: "ID", dataIndex: "tenant_id", key: "id", width: 90, render: (v) => <Tag color="purple">T-{v}</Tag>, sorter: (a, b) => a.tenant_id - b.tenant_id },
     { title: "Name", dataIndex: "full_name", key: "name", render: (v) => <Text strong>{v}</Text> },
@@ -214,7 +227,11 @@ function Tenants() {
       )}
 
       {/* Tenants Table */}
-      <Card className="glass-card" title={interestedIn ? `Interested Tenants for Property P-${interestedIn}` : "All Tenants"}>
+      <Card 
+        className="glass-card" 
+        title={interestedIn ? `Interested Tenants for Property P-${interestedIn}` : "All Tenants"}
+        extra={<Button icon={<DownloadOutlined />} onClick={exportCSV}>Export CSV</Button>}
+      >
         <Table dataSource={data} columns={columns} rowKey="tenant_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} tenants` }} size="middle"
           expandable={{

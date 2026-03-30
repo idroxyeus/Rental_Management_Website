@@ -5,7 +5,14 @@ import {
   DollarOutlined, WarningOutlined,
   CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined
 } from "@ant-design/icons"
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler
+} from "chart.js"
+import { Line } from "react-chartjs-2"
 import api from "../api/api"
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const cards = [
   { key: "properties", title: "Properties", icon: <HomeOutlined />, color: "#3b82f6" },
@@ -60,6 +67,34 @@ function Dashboard() {
     return { expected, collected };
   }
   
+  const getChartData = () => {
+    // Basic past 6 months aggregation
+    const months = [];
+    const incomeData = [];
+    const date = new Date();
+    for(let i=5; i>=0; i--) {
+      const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
+      const monthStr = d.toISOString().substring(0, 7);
+      months.push(d.toLocaleString('default', { month: 'short' }));
+      const monthIncome = stats.paymentsData?.filter(p => p.month === monthStr && p.status === "paid")?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      incomeData.push(monthIncome);
+    }
+    return {
+      labels: months,
+      datasets: [
+        {
+          label: 'Collected Rent (₹)',
+          data: incomeData,
+          fill: true,
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          borderColor: 'rgba(99, 102, 241, 1)',
+          tension: 0.4,
+          pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+        }
+      ]
+    }
+  }
+  
   const getRemainingDues = () => {
     const currentMonth = new Date().toISOString().substring(0, 7);
     return stats.paymentsData?.filter(p => p.month === currentMonth && p.status !== "paid") || [];
@@ -74,14 +109,14 @@ function Dashboard() {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Welcome back, {userCtx.user.name}</h2>
         {!userCtx.tenant ? (
-          <Card style={{ textAlign: "center", padding: 40, border: "1px solid #ff4d4f", background: "#fff2f0" }}>
-            <h3 style={{ color: "#cf1322", marginTop: 0 }}>Profile Incomplete!</h3>
+          <Card className="text-center py-6 border-red-400 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+            <h3 className="text-red-600 dark:text-red-400 mt-0">Profile Incomplete!</h3>
             <p>Please navigate to your Profile to add your details before you can apply for a lease.</p>
           </Card>
         ) : !l ? (
-          <Card style={{ textAlign: "center", padding: 40, background: "#fafafa" }}>
-            <h3 style={{ marginTop: 0 }}>No Active Lease</h3>
-            <p>You currently do not have a property assigned to you. Browse Properties to find your next home.</p>
+          <Card className="text-center py-6 bg-slate-50 dark:bg-slate-800/50">
+            <h3 className="mt-0">No Active Lease</h3>
+            <p className="text-slate-500 dark:text-slate-400">You currently do not have a property assigned to you. Browse Properties to find your next home.</p>
           </Card>
         ) : (
           <Row gutter={[24, 24]}>
@@ -124,7 +159,7 @@ function Dashboard() {
                 <div style={{ marginBottom: 24 }}>
                   <span style={{ display: "block", color: "#8c8c8c", marginBottom: 4 }}>Recent Payments</span>
                   {tenantStats.payments.slice(0, 2).map(p => (
-                    <div key={p.payment_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
+                    <div key={p.payment_id} className="flex justify-between text-[13px] mb-2 p-2 rounded bg-slate-100 dark:bg-slate-800">
                       <span>{p.month || p.payment_date.split("T")[0]}</span>
                       <strong style={{ color: p.status === "paid" ? "#52c41a" : "#faad14" }}>₹{p.amount} ({p.status})</strong>
                     </div>
@@ -134,7 +169,7 @@ function Dashboard() {
                 <div>
                   <span style={{ display: "block", color: "#8c8c8c", marginBottom: 4 }}>Recent Maintenance</span>
                   {tenantStats.complaints.slice(0, 2).map(c => (
-                    <div key={c.complaint_id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8, padding: 8, background: "#f5f5f5", borderRadius: 4 }}>
+                    <div key={c.complaint_id} className="flex justify-between text-[13px] mb-2 p-2 rounded bg-slate-100 dark:bg-slate-800">
                       <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 150 }}>{c.description}</span>
                       <strong style={{ color: c.status === "resolved" ? "#52c41a" : "#faad14" }}>{c.status.replace("_", " ")}</strong>
                     </div>
@@ -187,6 +222,23 @@ function Dashboard() {
             ) : <div style={{ padding: 24, textAlign: "center", color: "#bfbfbf" }}>No open complaints.</div>}
           </Card>
         </Col>
+        <Col xs={24} lg={12}>
+          <Card className="glass-card" title="Income Overview (Last 6 Months)" styles={{ body: { padding: "16px 24px" } }} style={{ height: "100%" }}>
+            <div style={{ height: 260 }}>
+              <Line 
+                data={getChartData()} 
+                options={{ 
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" } }, x: { grid: { display: false } } }
+                }} 
+              />
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
         <Col xs={24} lg={12}>
           <Card className="glass-card" title="Profit & Loss (Current Month)" styles={{ body: { padding: 32 } }} style={{ height: "100%" }}>
             <Row gutter={24}>

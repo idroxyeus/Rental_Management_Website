@@ -10,12 +10,16 @@ import Payments from "./pages/Payments"
 import Complaints from "./pages/Complaints"
 import Profile from "./pages/Profile"
 import AppLayout from "./components/AppLayout"
+import Landing from "./pages/Landing"
+import { ThemeProvider, useTheme } from "./context/ThemeContext"
 
-function App() {
+function MainApp() {
+  const { isDarkMode } = useTheme();
+
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.defaultAlgorithm,
+        algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
           colorPrimary: "#6366f1",
           colorInfo: "#3b82f6",
@@ -39,7 +43,8 @@ function App() {
     >
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<AppLayout><Profile /></AppLayout>} />
           <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
@@ -51,6 +56,14 @@ function App() {
         </Routes>
       </BrowserRouter>
     </ConfigProvider>
+  )
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <MainApp />
+    </ThemeProvider>
   )
 }
 

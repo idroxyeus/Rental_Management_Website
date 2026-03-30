@@ -6,6 +6,8 @@ import {
   FileTextOutlined, DollarOutlined, WarningOutlined,
   LogoutOutlined, UserOutlined
 } from "@ant-design/icons"
+import { FaSun, FaMoon } from "react-icons/fa"
+import { useTheme } from "../context/ThemeContext"
 import api from "../api/api"
 
 const { Sider, Header, Content } = Layout
@@ -34,6 +36,7 @@ const pageTitles = {
 function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
   const [userCtx, setUserCtx] = useState(null)
+  const { isDarkMode, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -109,14 +112,14 @@ function AppLayout({ children }) {
       <Layout style={{ marginLeft: collapsed ? 80 : 220, transition: "margin-left 0.2s" }}>
         <Header
           style={{
-            background: "rgba(255, 255, 255, 0.7)",
+            background: isDarkMode ? "rgba(15, 23, 42, 0.8)" : "rgba(255, 255, 255, 0.7)",
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
             padding: "0 28px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid rgba(0,0,0,0.04)",
+            borderBottom: isDarkMode ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.04)",
             boxShadow: "0 4px 30px rgba(0,0,0,0.03)",
             position: "sticky",
             top: 0,
@@ -134,6 +137,12 @@ function AppLayout({ children }) {
               {userCtx.user.role}
             </Tag>
             <Button
+              type="text"
+              onClick={toggleTheme}
+              icon={isDarkMode ? <FaSun className="text-amber-400" /> : <FaMoon />}
+              className="flex items-center justify-center p-2"
+            />
+            <Button
               icon={<LogoutOutlined />}
               onClick={logout}
               danger
@@ -145,7 +154,7 @@ function AppLayout({ children }) {
           </Space>
         </Header>
 
-        <Content style={{ padding: "32px 32px", background: "#f8fafc", minHeight: "calc(100vh - 72px)" }}>
+        <Content style={{ padding: "32px 32px", background: isDarkMode ? "#020617" : "#f8fafc", minHeight: "calc(100vh - 72px)" }}>
           {children}
         </Content>
       </Layout>

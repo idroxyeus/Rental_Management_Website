@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message } from "antd"
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons"
+import { PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined } from "@ant-design/icons"
 import api from "../api/api"
 
 function Payments() {
@@ -58,6 +58,19 @@ function Payments() {
   const remove = async (id) => {
     const hide = message.loading("Deleting...", 0)
     await api.delete(`/payments/${id}`); hide(); message.success("Deleted"); load()
+  }
+
+  const exportCSV = () => {
+    const headers = ["Payment ID", "Lease ID", "Amount", "Date", "Month", "Status"];
+    const csvData = data.map(p => [
+      p.payment_id, p.lease_id, p.amount, p.payment_date?.split("T")[0], p.month, p.status
+    ]);
+    const csvContent = [headers, ...csvData].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `payments_export_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
   }
 
   const statusColors = { paid: "green", pending: "orange", overdue: "red" }
@@ -122,7 +135,11 @@ function Payments() {
         </Form>
       </Card>
 
-      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "My Payment History" : "All Payments"}>
+      <Card 
+        className="glass-card" 
+        title={userCtx?.user.role === "tenant" ? "My Payment History" : "All Payments"}
+        extra={<Button icon={<DownloadOutlined />} onClick={exportCSV}>Export CSV</Button>}
+      >
         <Table dataSource={data} columns={columns} rowKey="payment_id" loading={loading}
           pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} payments` }} size="middle" scroll={{ x: 800 }} />
       </Card>
