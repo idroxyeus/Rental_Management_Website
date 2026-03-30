@@ -4,7 +4,7 @@ import { Layout, Menu, Button, Typography, Avatar, Tag, Space } from "antd"
 import {
   DashboardOutlined, HomeOutlined, TeamOutlined,
   FileTextOutlined, DollarOutlined, WarningOutlined,
-  LogoutOutlined, UserOutlined
+  LogoutOutlined, UserOutlined, AreaChartOutlined
 } from "@ant-design/icons"
 import { FaSun, FaMoon } from "react-icons/fa"
 import { useTheme } from "../context/ThemeContext"
@@ -20,6 +20,7 @@ const baseMenuItems = [
   { key: "/tenants", icon: <TeamOutlined />, label: "Tenants", roles: ["admin", "landlord"] },
   { key: "/leases", icon: <FileTextOutlined />, label: "Leases", requiresLease: true },
   { key: "/payments", icon: <DollarOutlined />, label: "Payments", requiresLease: true },
+  { key: "/expenses", icon: <AreaChartOutlined />, label: "Expenses", roles: ["admin", "landlord"] },
   { key: "/complaints", icon: <WarningOutlined />, label: "Complaints", requiresLease: true },
 ]
 
@@ -30,6 +31,7 @@ const pageTitles = {
   "/tenants": "Tenants",
   "/leases": "Leases",
   "/payments": "Payments",
+  "/expenses": "Expenses",
   "/complaints": "Complaints",
 }
 

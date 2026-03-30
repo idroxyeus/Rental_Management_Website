@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { Card, Table, Form, Input, Select, Button, Space, Tag, Popconfirm, message, Descriptions, Drawer } from "antd"
+import { Card, Form, Input, Select, Button, Space, Tag, Popconfirm, message, Descriptions, Drawer, Row, Col, Empty } from "antd"
 import { useNavigate } from "react-router-dom"
-import { PlusOutlined, EditOutlined, DeleteOutlined, HeartOutlined, EyeOutlined, CheckOutlined } from "@ant-design/icons"
+import { PlusOutlined, EditOutlined, DeleteOutlined, HeartOutlined, EyeOutlined, CheckOutlined, FileImageOutlined } from "@ant-design/icons"
 import api from "../api/api"
 
 function Properties() {
@@ -28,7 +28,7 @@ function Properties() {
   const onFinish = async (values) => {
     const hide = message.loading("Saving property...", 0)
     try {
-      const payload = { address: values.address, property_type: values.type, rent_amount: values.rent, status: values.status }
+      const payload = { address: values.address, property_type: values.type, rent_amount: values.rent, status: values.status, image_url: values.image_url }
       if (editId) { await api.put(`/properties/${editId}`, payload) }
       else { await api.post("/properties", payload) }
       hide()
@@ -37,7 +37,7 @@ function Properties() {
     } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
   }
 
-  const edit = (r) => { setEditId(r.property_id); form.setFieldsValue({ address: r.address, type: r.property_type, rent: r.rent_amount, status: r.status }) }
+  const edit = (r) => { setEditId(r.property_id); form.setFieldsValue({ address: r.address, type: r.property_type, rent: r.rent_amount, status: r.status, image_url: r.image_url }) }
   const cancel = () => { setEditId(null); form.resetFields() }
   const remove = async (id) => { 
     const hide = message.loading("Deleting...", 0)
@@ -105,6 +105,7 @@ function Properties() {
                 ]} />
               </Form.Item>
               <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
+              <Form.Item name="image_url" label="Image URL (Optional)"><Input placeholder="https://images.unsplash.com/..." /></Form.Item>
               <Form.Item name="status" label="Status">
                 <Select options={[{ value: "vacant", label: "Vacant" }, { value: "occupied", label: "Occupied" }]} />
               </Form.Item>
@@ -126,10 +127,62 @@ function Properties() {
         </Card>
       )}
 
-      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"}>
-        <Table dataSource={userCtx?.user.role === "tenant" ? data.filter(p => p.status === "vacant" || p.property_id === userCtx.activeLease?.property_id) : data} 
-          columns={columns} rowKey="property_id" loading={loading}
-          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `${t} properties` }} size="middle" />
+      <Card className="glass-card" title={userCtx?.user.role === "tenant" ? "Vacant Properties Available" : "All Properties"} styles={{ body: { padding: "24px", background: "transparent" } }}>
+        <Row gutter={[24, 24]}>
+          {(userCtx?.user.role === "tenant" ? data.filter(p => p.status === "vacant" || p.property_id === userCtx.activeLease?.property_id) : data).map((r) => {
+            const isTenant = userCtx?.user.role === "tenant";
+            return (
+              <Col xs={24} sm={12} lg={8} xl={6} key={r.property_id}>
+                <Card 
+                  hoverable
+                  className="overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  cover={
+                    <div className="h-48 overflow-hidden relative group bg-indigo-50 dark:bg-slate-700 flex items-center justify-center">
+                      {r.image_url ? (
+                        <img alt={r.address} src={r.image_url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <FileImageOutlined className="text-4xl text-indigo-200 dark:text-slate-500" />
+                      )}
+                      <div className="absolute top-3 right-3">
+                        <Tag color="purple" className="shadow-sm border-0 font-medium">P-{r.property_id}</Tag>
+                      </div>
+                      <div className="absolute top-3 left-3">
+                        <Tag color={r.status === "vacant" ? "green" : "orange"} className="shadow-sm border-0 font-medium">
+                          {r.status.toUpperCase()}
+                        </Tag>
+                      </div>
+                    </div>
+                  }
+                  actions={
+                    isTenant ? [
+                      <Button type="text" block disabled={clickedInterests.includes(r.property_id) || r.status !== "vacant"} icon={clickedInterests.includes(r.property_id) ? <CheckOutlined /> : <HeartOutlined />} onClick={() => handleInterest(r.property_id)} className="text-indigo-600 dark:text-indigo-400">
+                        {clickedInterests.includes(r.property_id) ? "Interested" : "Express Interest"}
+                      </Button>
+                    ] : [
+                      <Button type="text" icon={<EyeOutlined />} onClick={() => viewDetails(r)} className="hover:text-indigo-500" title="View Details" />,
+                      <Button type="text" icon={<HeartOutlined />} onClick={() => navigate(`/tenants?interested_in=${r.property_id}`)} className="hover:text-rose-500" title="View Interested Tenants" />,
+                      <Button type="text" icon={<EditOutlined />} onClick={() => edit(r)} title="Edit Property" />,
+                      <Popconfirm title="Delete this property?" onConfirm={() => remove(r.property_id)}>
+                        <Button type="text" danger icon={<DeleteOutlined />} title="Delete Property" />
+                      </Popconfirm>
+                    ]
+                  }
+                >
+                  <Card.Meta 
+                    title={<h3 className="text-lg font-bold truncate text-slate-800 dark:text-slate-100">{r.address}</h3>}
+                    description={
+                      <div className="flex flex-col gap-1 mt-2">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">{r.property_type}</span>
+                        <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">₹{r.rent_amount}<span className="text-sm font-normal text-slate-400">/mo</span></span>
+                      </div>
+                    }
+                  />
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+        {data.length === 0 && !loading && <Empty description="No properties found" className="my-10" />}
       </Card>
 
       {/* Landlord View Details Drawer */}
