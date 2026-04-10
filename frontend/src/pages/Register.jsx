@@ -13,9 +13,10 @@ function Register() {
   const onFinish = async (values) => {
     setLoading(true)
     try {
-      await api.post("/register", values)
-      message.success("Account created! Please sign in.")
-      navigate("/")
+      const res = await api.post("/register", values)
+      localStorage.setItem("token", res.data.token) // Auto-login
+      message.success("Account created successfully! Welcome ✔")
+      navigate("/dashboard")
     } catch (err) {
       message.error(err.response?.data?.message || "Registration failed")
     } finally {

@@ -5,15 +5,15 @@ const verifyToken = require("../middleware/auth");
 
 // Create landlord
 router.post("/", verifyToken, (req, res) => {
-  const { user_id, full_name, phone_number, email, address, id_proof } = req.body;
+  const { user_id, full_name, phone_number, email, address } = req.body;
 
   if (!user_id || !full_name || !phone_number) {
     return res.status(400).json({ message: "User ID, full name, and phone number are required" });
   }
 
   db.query(
-    `INSERT INTO landlords (user_id, full_name, phone_number, email, address, id_proof) VALUES (?, ?, ?, ?, ?, ?)`,
-    [user_id, full_name, phone_number, email || null, address || null, id_proof || null],
+    `INSERT INTO landlords (user_id, full_name, phone_number, email, address) VALUES (?, ?, ?, ?, ?)`,
+    [user_id, full_name, phone_number, email || null, address || null],
     (err, result) => {
       if (err) return res.status(500).json({ message: "Failed to create landlord", error: err.message });
       res.status(201).json({ landlord_id: result.insertId, message: "Landlord created" });
@@ -32,11 +32,11 @@ router.get("/user/:userId", verifyToken, (req, res) => {
 
 // Update landlord
 router.put("/:id", verifyToken, (req, res) => {
-  const { full_name, phone_number, email, address, id_proof } = req.body;
+  const { full_name, phone_number, email, address } = req.body;
 
   db.query(
-    `UPDATE landlords SET full_name=?, phone_number=?, email=?, address=?, id_proof=? WHERE landlord_id=?`,
-    [full_name, phone_number, email || null, address || null, id_proof || null, req.params.id],
+    `UPDATE landlords SET full_name=?, phone_number=?, email=?, address=? WHERE landlord_id=?`,
+    [full_name, phone_number, email || null, address || null, req.params.id],
     (err, result) => {
       if (err) return res.status(500).json({ message: "Failed to update landlord", error: err.message });
       if (result.affectedRows === 0) return res.status(404).json({ message: "Landlord not found" });

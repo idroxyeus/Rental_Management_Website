@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS properties (
   property_type VARCHAR(50) NOT NULL,
   rent_amount DECIMAL(10, 2) NOT NULL,
   status ENUM('vacant', 'occupied') DEFAULT 'vacant',
-  image_url VARCHAR(500) DEFAULT NULL,
+  images LONGTEXT DEFAULT NULL,
+  facilities TEXT DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -32,7 +33,6 @@ CREATE TABLE IF NOT EXISTS landlords (
   phone_number VARCHAR(20) NOT NULL,
   email VARCHAR(100),
   address TEXT,
-  id_proof VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
@@ -52,9 +52,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   occupation VARCHAR(100),
   emergency_contact_name VARCHAR(100),
   emergency_contact_phone VARCHAR(20),
-  id_proof VARCHAR(100),
   income DECIMAL(10, 2),
-  family_size INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );

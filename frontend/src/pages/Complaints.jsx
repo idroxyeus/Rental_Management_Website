@@ -11,6 +11,7 @@ function Complaints() {
   const [userCtx, setUserCtx] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
 
   const load = async () => {
@@ -21,7 +22,13 @@ function Complaints() {
   }
   useEffect(() => { load() }, [])
 
-  const propertyOptions = properties.map(p => ({ value: p.property_id, label: `P-${p.property_id} - ${p.address}` }))
+  let propertyOptions = properties.map(p => ({ value: p.property_id, label: `P-${p.property_id} - ${p.address}` }))
+
+  if (userCtx?.user.role === "tenant") {
+    const validPropertyIds = new Set(leases.map(l => l.property_id))
+    propertyOptions = propertyOptions.filter(opt => validPropertyIds.has(opt.value))
+  }
+
   const tenantOptions = tenants.map(t => ({ value: t.tenant_id, label: `T-${t.tenant_id} - ${t.full_name}` }))
 
   const selectedPropertyId = Form.useWatch("propertyId", form)
@@ -38,15 +45,17 @@ function Complaints() {
   const propMap = Object.fromEntries(properties.map(p => [p.property_id, p]))
 
   const onFinish = async (values) => {
+    setSubmitting(true)
     const hide = message.loading("Saving complaint...", 0)
     try {
       const tenantId = userCtx?.user.role === "tenant" ? userCtx.tenant?.tenant_id : values.tenantId;
       if (editId) { await api.put(`/complaints/${editId}`, { description: values.description, status: values.status }) }
       else { await api.post("/complaints", { tenant_id: tenantId, property_id: values.propertyId, description: values.description, status: values.status || "open" }) }
       hide()
-      message.success(editId ? "Complaint updated!" : "Complaint submitted!")
+      message.success(editId ? "Complaint updated! ✔" : "Complaint submitted! ✔")
       form.resetFields(); setEditId(null); load()
     } catch (err) { hide(); message.error(err.response?.data?.message || "Failed to submit request") }
+    finally { setSubmitting(false) }
   }
 
   const edit = (r) => { setEditId(r.complaint_id); form.setFieldsValue({ propertyId: r.property_id, tenantId: r.tenant_id, description: r.description, status: r.status }) }
@@ -112,7 +121,7 @@ function Complaints() {
             <Form.Item name="propertyId" label="Select Property" rules={[{ required: !editId, message: "Pick a property" }]}>
               <Select placeholder="Search properties..." showSearch disabled={!!editId}
                 optionFilterProp="label" options={propertyOptions}
-                notFoundContent="No properties available" />
+                notFoundContent={userCtx?.user.role === "tenant" ? "You must have a lease to file complaints" : "No properties available"} />
             </Form.Item>
             {userCtx?.user.role !== "tenant" && (
               <Form.Item name="tenantId" label="Tenant" rules={[{ required: true, message: "Pick a tenant" }]}>
@@ -128,7 +137,7 @@ function Complaints() {
               </Form.Item>
             )}
           </div>
-          <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Complaint" : "File Complaint"}</Button>
+          <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={submitting}>{editId ? "Update Complaint" : "File Complaint"}</Button>
         </Form>
       </Card>
 

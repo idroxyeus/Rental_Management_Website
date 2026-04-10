@@ -20,14 +20,27 @@ router.post("/register", async (req, res) => {
     db.query(
       "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
       [name, email, hashed, role || "tenant"],
-      (err) => {
+      (err, result) => {
         if (err) {
           if (err.code === "ER_DUP_ENTRY") {
-            return res.status(409).json({ message: "Email already exists" });
+            console.log("Duplicate registration attempt caught for:", email);
+            return res.status(409).json({ message: "This email is already in use. You cannot sign up using this email." });
           }
           return res.status(500).json({ message: "Registration failed" });
         }
-        res.status(201).json({ message: "User registered successfully" });
+        
+        // Generate token for auto-login
+        const token = jwt.sign(
+          { id: result.insertId, role: role || "tenant", name: name },
+          SECRET,
+          { expiresIn: "2h" }
+        );
+        
+        res.status(201).json({ 
+          token, 
+          user: { name, role: role || "tenant" },
+          message: "User registered successfully" 
+        });
       }
     );
   } catch (err) {

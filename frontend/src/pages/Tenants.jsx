@@ -10,6 +10,7 @@ function Tenants() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
 
   const [searchParams] = useSearchParams()
@@ -23,6 +24,7 @@ function Tenants() {
   const [familyMembers, setFamilyMembers] = useState([])
   const [familyLoading, setFamilyLoading] = useState(false)
   const [familyEditId, setFamilyEditId] = useState(null)
+  const [familySubmitting, setFamilySubmitting] = useState(false)
   const [familyForm] = Form.useForm()
 
   const load = async () => { 
@@ -48,21 +50,22 @@ function Tenants() {
 
   // ── Tenant CRUD ──
   const onFinish = async (values) => {
+    setSubmitting(true)
     const hide = message.loading("Saving tenant...", 0)
     try {
       const payload = {
         user_id: values.user_id, full_name: values.full_name, date_of_birth: values.dob || null, gender: values.gender,
         phone_number: values.phone, email: values.email || null, permanent_address: values.address || null,
         aadhaar_number: values.aadhaar || null, pan_number: values.pan || null, occupation: values.occupation || null,
-        income: values.income || null, emergency_contact_name: values.ec_name || null, emergency_contact_phone: values.ec_phone || null,
-        id_proof: null, family_size: values.family_size || 0
+        income: values.income || null, emergency_contact_name: values.ec_name || null, emergency_contact_phone: values.ec_phone || null
       }
       if (editId) { await api.put(`/tenants/${editId}`, payload) }
       else { await api.post("/tenants", payload) }
       hide()
-      message.success(editId ? "Tenant updated!" : "Tenant added!")
+      message.success(editId ? "Tenant updated! ✔" : "Tenant added! ✔")
       form.resetFields(); setEditId(null); load()
     } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
+    finally { setSubmitting(false) }
   }
 
   const edit = (r) => {
@@ -72,11 +75,15 @@ function Tenants() {
       gender: r.gender, phone: r.phone_number, email: r.email,
       address: r.permanent_address, aadhaar: r.aadhaar_number, pan: r.pan_number,
       occupation: r.occupation, ec_name: r.emergency_contact_name,
-      ec_phone: r.emergency_contact_phone, id_proof: r.id_proof,
+      ec_phone: r.emergency_contact_phone
     })
   }
   const cancel = () => { setEditId(null); form.resetFields() }
-  const remove = async (id) => { await api.delete(`/tenants/${id}`); message.success("Deleted"); load() }
+  const remove = async (id) => { 
+    const hide = message.loading("Deleting tenant...", 0)
+    try { await api.delete(`/tenants/${id}`); hide(); message.success("Tenant deleted"); load() }
+    catch(e) { hide(); message.error(e.response?.data?.message || "Failed to delete") }
+  }
 
   // ── Family Members ──
   const openFamily = async (tenant) => {
@@ -87,6 +94,8 @@ function Tenants() {
   }
 
   const addFamily = async (values) => {
+    setFamilySubmitting(true)
+    const hide = message.loading(familyEditId ? "Updating member..." : "Adding member...", 0)
     try {
       const payload = {
         full_name: values.fm_name, relationship: values.fm_rel,
@@ -100,10 +109,12 @@ function Tenants() {
       } else {
         await api.post(`/tenants/${selectedTenant.tenant_id}/family`, payload)
       }
-      message.success(familyEditId ? "Updated!" : "Family member added!")
+      hide()
+      message.success(familyEditId ? "Family member updated! ✔" : "Family member added! ✔")
       familyForm.resetFields()
       setFamilyMembers((await api.get(`/tenants/${selectedTenant.tenant_id}/family`)).data)
-    } catch (err) { message.error(err.response?.data?.message || "Failed") }
+    } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
+    finally { setFamilySubmitting(false) }
   }
 
   const editFamily = (m) => {
@@ -115,9 +126,12 @@ function Tenants() {
   }
 
   const removeFamily = async (memberId) => {
-    await api.delete(`/tenants/${selectedTenant.tenant_id}/family/${memberId}`)
-    message.success("Removed")
-    setFamilyMembers((await api.get(`/tenants/${selectedTenant.tenant_id}/family`)).data)
+    const hide = message.loading("Removing member...", 0)
+    try {
+      await api.delete(`/tenants/${selectedTenant.tenant_id}/family/${memberId}`)
+      hide(); message.success("Family member removed")
+      setFamilyMembers((await api.get(`/tenants/${selectedTenant.tenant_id}/family`)).data)
+    } catch(e) { hide(); message.error("Failed to remove") }
   }
 
 
@@ -207,7 +221,6 @@ function Tenants() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
             <Form.Item name="aadhaar" label="Aadhaar Number"><Input placeholder="1234 5678 9012" maxLength={12} /></Form.Item>
             <Form.Item name="pan" label="PAN Number"><Input placeholder="ABCDE1234F" maxLength={10} style={{ textTransform: "uppercase" }} /></Form.Item>
-            <Form.Item name="id_proof" label="Other ID Proof"><Input placeholder="Passport, Driving License..." /></Form.Item>
           </div>
 
           <Divider orientation="left" plain>📍 Address & Emergency</Divider>
@@ -219,7 +232,7 @@ function Tenants() {
             </div>
           </div>
 
-          <Button type="primary" htmlType="submit" icon={<PlusOutlined />} style={{ marginTop: 8 }}>
+          <Button type="primary" htmlType="submit" icon={<PlusOutlined />} style={{ marginTop: 8 }} loading={submitting}>
             {editId ? "Update Tenant" : "Add Tenant"}
           </Button>
         </Form>
@@ -244,7 +257,6 @@ function Tenants() {
                 <Descriptions.Item label="Monthly Income">{r.income ? `₹${r.income}` : "—"}</Descriptions.Item>
                 <Descriptions.Item label="Permanent Address" span={2}>{r.permanent_address || "—"}</Descriptions.Item>
                 <Descriptions.Item label="Emergency Contact">{r.emergency_contact_name ? `${r.emergency_contact_name} (${r.emergency_contact_phone || "—"})` : "—"}</Descriptions.Item>
-                <Descriptions.Item label="ID Proof">{r.id_proof || "—"}</Descriptions.Item>
               </Descriptions>
             ),
           }}
@@ -278,7 +290,7 @@ function Tenants() {
               <Form.Item name="fm_occ" label="Occupation"><Input placeholder="Student, Retired..." /></Form.Item>
               <Form.Item name="fm_phone" label="Phone"><Input placeholder="+91 ..." /></Form.Item>
             </div>
-            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{familyEditId ? "Update" : "Add Member"}</Button>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={familySubmitting}>{familyEditId ? "Update" : "Add Member"}</Button>
           </Form>
         </Card>
 

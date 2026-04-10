@@ -36,28 +36,54 @@ function Dashboard() {
   const [userCtx, setUserCtx] = useState(null)
   const [stats, setStats] = useState({ properties: 0, tenants: 0, leases: 0, payments: 0, complaints: 0 })
   const [tenantStats, setTenantStats] = useState({ payments: [], complaints: [] })
+  const [interests, setInterests] = useState([])  // [{property, tenants:[]}]
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get("/me").then(res => {
+    api.get("/me").then(async res => {
       setUserCtx(res.data)
       if (res.data.user.role === "tenant") {
         Promise.all([api.get("/payments"), api.get("/complaints")])
           .then(([pay, c]) => setTenantStats({ payments: pay.data, complaints: c.data }))
+          .catch(() => setTenantStats({ payments: [], complaints: [] }))
           .finally(() => setLoading(false))
       } else {
-        Promise.all([
+        Promise.allSettled([
           api.get("/properties"), api.get("/tenants"), api.get("/leases"),
           api.get("/payments"), api.get("/complaints"), api.get("/expenses")
-        ]).then(([p, t, l, pay, c, exp]) => {
-          setStats({ 
-            properties: p.data.length, tenants: t.data.length, leases: l.data.length, payments: pay.data.length, complaints: c.data.length,
-            propertiesData: p.data, tenantsData: t.data, leasesData: l.data, paymentsData: pay.data, expensesData: exp.data 
+        ]).then(async ([p, t, l, pay, c, exp]) => {
+          const get = (r) => (r.status === "fulfilled" ? r.value.data : [])
+          const props   = get(p)
+          const tenants = get(t)
+          const leases  = get(l)
+          const payments = get(pay)
+          const complaints = get(c)
+          const expenses = get(exp)
+          setStats({
+            properties: props.length, tenants: tenants.length, leases: leases.length,
+            payments: payments.length, complaints: complaints.length,
+            propertiesData: props, tenantsData: tenants, leasesData: leases,
+            paymentsData: payments, expensesData: expenses
           })
-          setTenantStats({ complaints: c.data })
+          setTenantStats({ complaints })
+          
+          // Load interests for all properties
+          const interestResults = await Promise.all(
+            props.map(prop => api.get(`/properties/${prop.property_id}/interests`)
+              .then(r => ({ property: prop, tenantIds: r.data }))
+              .catch(() => ({ property: prop, tenantIds: [] }))
+            )
+          )
+          const withInterests = interestResults.filter(i => i.tenantIds.length > 0)
+          if (withInterests.length > 0) {
+            setInterests(withInterests.map(i => ({
+              property: i.property,
+              tenants: i.tenantIds.map(tid => tenants.find(ten => ten.tenant_id === tid)).filter(Boolean)
+            })))
+          }
         }).finally(() => setLoading(false))
       }
-    }).catch(console.error)
+    }).catch(() => setLoading(false))
   }, [])
 
   const computePnl = () => {
@@ -121,12 +147,7 @@ function Dashboard() {
     return (
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>Welcome back, {userCtx.user.name}</h2>
-        {!userCtx.tenant ? (
-          <Card className="text-center py-6 border-red-400 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-            <h3 className="text-red-600 dark:text-red-400 mt-0">Profile Incomplete!</h3>
-            <p>Please navigate to your Profile to add your details before you can apply for a lease.</p>
-          </Card>
-        ) : !l ? (
+        {!l ? (
           <Card className="text-center py-6 bg-slate-50 dark:bg-slate-800/50">
             <h3 className="mt-0">No Active Lease</h3>
             <p className="text-slate-500 dark:text-slate-400">You currently do not have a property assigned to you. Browse Properties to find your next home.</p>
@@ -236,24 +257,6 @@ function Dashboard() {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card className="glass-card" title="Income Overview (Last 6 Months)" styles={{ body: { padding: "16px 24px" } }} style={{ height: "100%" }}>
-            <div style={{ height: 260 }}>
-              <Line 
-                data={getChartData()} 
-                options={{ 
-                  responsive: true, maintainAspectRatio: false,
-                  plugins: { legend: { display: true, position: 'top' } },
-                  scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" } }, x: { grid: { display: false } } },
-                  interaction: { mode: 'index', intersect: false }
-                }} 
-              />
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={12}>
           <Card className="glass-card" title="Profit & Loss (Current Month)" styles={{ body: { padding: 32 } }} style={{ height: "100%" }}>
             <Row gutter={24}>
               <Col span={8}>
@@ -287,6 +290,34 @@ function Dashboard() {
                 }}
               />
             </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
+        <Col xs={24} lg={24}>
+          <Card className="glass-card" title="🏠 Tenants Interested in Properties" styles={{ body: { padding: 0 } }} style={{ height: "100%" }}>
+            {interests.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", color: "#bfbfbf" }}>No tenants have expressed interest yet.</div>
+            ) : (
+              <List
+                dataSource={interests}
+                renderItem={item => (
+                  <List.Item style={{ padding: "12px 24px", display: "block" }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                      <Tag color="blue">P-{item.property.property_id}</Tag> {item.property.address}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {item.tenants.map(t => (
+                        <Tag key={t.tenant_id} color="purple" style={{ margin: 0 }}>
+                          T-{t.tenant_id} · {t.full_name}
+                        </Tag>
+                      ))}
+                    </div>
+                  </List.Item>
+                )}
+              />
+            )}
           </Card>
         </Col>
       </Row>

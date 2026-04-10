@@ -11,6 +11,7 @@ function Expenses() {
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
 
   const loadData = async () => {
@@ -32,6 +33,7 @@ function Expenses() {
   useEffect(() => { loadData() }, [])
 
   const onFinish = async (values) => {
+    setSubmitting(true)
     const hide = message.loading("Saving expense...", 0)
     try {
       const payload = {
@@ -43,13 +45,15 @@ function Expenses() {
       }
       await api.post("/expenses", payload)
       hide()
-      message.success("Expense added successfully!")
+      message.success("Expense added successfully! ✔")
       form.resetFields()
       setIsAdding(false)
       loadData()
     } catch (err) {
       hide()
       message.error(err.response?.data?.message || "Failed to add expense")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -156,7 +160,7 @@ function Expenses() {
             <Form.Item name="description" label="Description" rules={[{ required: true }]}>
               <Input.TextArea placeholder="E.g., Plumbing repair for apartment 4A" rows={2} />
             </Form.Item>
-            <Button type="primary" htmlType="submit" icon={<AreaChartOutlined />}>Save Expense</Button>
+            <Button type="primary" htmlType="submit" icon={<AreaChartOutlined />} loading={submitting}>Save Expense</Button>
           </Form>
         </Card>
       )}

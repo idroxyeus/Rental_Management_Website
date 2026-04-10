@@ -17,10 +17,10 @@ const baseMenuItems = [
   { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
   { key: "/profile", icon: <UserOutlined />, label: "Profile" },
   { key: "/properties", icon: <HomeOutlined />, label: "Properties" },
-  { key: "/tenants", icon: <TeamOutlined />, label: "Tenants", roles: ["admin", "landlord"] },
+  { key: "/tenants", icon: <TeamOutlined />, label: "Tenants", roles: ["admin"] },
   { key: "/leases", icon: <FileTextOutlined />, label: "Leases", requiresLease: true },
   { key: "/payments", icon: <DollarOutlined />, label: "Payments", requiresLease: true },
-  { key: "/expenses", icon: <AreaChartOutlined />, label: "Expenses", roles: ["admin", "landlord"] },
+  { key: "/expenses", icon: <AreaChartOutlined />, label: "Expenses", roles: ["admin"] },
   { key: "/complaints", icon: <WarningOutlined />, label: "Complaints", requiresLease: true },
 ]
 

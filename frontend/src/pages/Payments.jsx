@@ -14,6 +14,7 @@ function Payments() {
   const [loading, setLoading] = useState(true)
   const [userCtx, setUserCtx] = useState(null)
   const [editId, setEditId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
 
   const [checkoutPayment, setCheckoutPayment] = useState(null)
@@ -46,15 +47,17 @@ function Payments() {
   const leaseMap = Object.fromEntries(leases.map(l => [l.lease_id, l]))
 
   const onFinish = async (values) => {
+    setSubmitting(true)
     const hide = message.loading("Processing payment...", 0)
     try {
       const payload = { amount: values.amount, payment_date: values.date, month: values.month, status: values.status }
       if (editId) { await api.put(`/payments/${editId}`, payload) }
       else { await api.post("/payments", { ...payload, lease_id: values.leaseId }) }
       hide()
-      message.success(editId ? "Payment updated!" : "Payment recorded!")
+      message.success(editId ? "Payment updated! ✔" : "Payment recorded! ✔")
       form.resetFields(); setEditId(null); load()
     } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
+    finally { setSubmitting(false) }
   }
 
   const edit = (r) => {
@@ -166,7 +169,7 @@ function Payments() {
                 <Select options={[{ value: "paid", label: "Paid" }, { value: "pending", label: "Pending" }, { value: "overdue", label: "Overdue" }]} />
               </Form.Item>
             </div>
-            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Payment" : "Submit Payment Record"}</Button>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={submitting}>{editId ? "Update Payment" : "Submit Payment Record"}</Button>
           </Form>
         </Card>
       )}

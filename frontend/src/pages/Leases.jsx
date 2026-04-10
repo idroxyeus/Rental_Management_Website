@@ -13,6 +13,7 @@ function Leases() {
   const [userCtx, setUserCtx] = useState(null)
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm()
   
   const [searchParams] = useSearchParams()
@@ -45,15 +46,17 @@ function Leases() {
   const tenantMap = Object.fromEntries(tenants.map(t => [t.tenant_id, t]))
 
   const onFinish = async (values) => {
+    setSubmitting(true)
     const hide = message.loading("Saving lease...", 0)
     try {
       const payload = { property_id: values.propertyId, tenant_id: values.tenantId, start_date: values.start, end_date: values.end, rent_amount: values.rent, deposit: values.deposit, status: values.status }
       if (editId) { await api.put(`/leases/${editId}`, payload) }
       else { await api.post("/leases", payload) }
       hide()
-      message.success(editId ? "Lease updated!" : "Lease created!")
+      message.success(editId ? "Lease updated! ✔" : "Lease created! ✔")
       form.resetFields(); setEditId(null); load()
     } catch (err) { hide(); message.error(err.response?.data?.message || "Failed") }
+    finally { setSubmitting(false) }
   }
 
   const edit = (r) => { setEditId(r.lease_id); form.setFieldsValue({ propertyId: r.property_id, tenantId: r.tenant_id, start: r.start_date?.split("T")[0], end: r.end_date?.split("T")[0], rent: r.rent_amount, deposit: r.deposit, status: r.status }) }
@@ -107,15 +110,15 @@ function Leases() {
                   optionFilterProp="label" options={tenantOptions}
                   notFoundContent="No tenants available" />
               </Form.Item>
-              <Form.Item name="startDate" label="Start Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
-              <Form.Item name="endDate" label="End Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+              <Form.Item name="start" label="Start Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+              <Form.Item name="end" label="End Date" rules={[{ required: true }]}><Input type="date" /></Form.Item>
               <Form.Item name="rent" label="Rent (₹)" rules={[{ required: true }]}><Input type="number" placeholder="15000" /></Form.Item>
               <Form.Item name="deposit" label="Deposit (₹)"><Input type="number" placeholder="30000" /></Form.Item>
               <Form.Item name="status" label="Status">
                 <Select options={[{ value: "active", label: "Active" }, { value: "expired", label: "Expired" }, { value: "terminated", label: "Terminated" }]} />
               </Form.Item>
             </div>
-            <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>{editId ? "Update Lease" : "Create Lease"}</Button>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={submitting}>{editId ? "Update Lease" : "Create Lease"}</Button>
           </Form>
         </Card>
       )}
