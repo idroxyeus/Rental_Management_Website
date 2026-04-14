@@ -24,14 +24,24 @@ router.post("/", verifyToken, (req, res) => {
 // Get all properties
 router.get("/", verifyToken, (req, res) => {
   if (req.user.role === "tenant") {
-    db.query("SELECT * FROM properties WHERE status = 'vacant' ORDER BY property_id DESC", (err, results) => {
-      if (err) return res.status(500).json({ message: "Failed to fetch properties" });
-      const parsed = results.map(r => ({
-        ...r,
-        images: JSON.parse(r.images || "[]"),
-        facilities: JSON.parse(r.facilities || "[]")
-      }))
-      res.json(parsed);
+    db.query("SELECT tenant_id FROM tenants WHERE user_id = ?", [req.user.id], (err, tenants) => {
+      let q = "SELECT * FROM properties WHERE status = 'vacant'";
+      let params = [];
+      if (!err && tenants.length > 0) {
+        q = "SELECT * FROM properties WHERE status = 'vacant' OR property_id IN (SELECT property_id FROM leases WHERE tenant_id = ? AND status = 'active')";
+        params.push(tenants[0].tenant_id);
+      }
+      q += " ORDER BY property_id DESC";
+      
+      db.query(q, params, (err, results) => {
+        if (err) return res.status(500).json({ message: "Failed to fetch properties" });
+        const parsed = results.map(r => ({
+          ...r,
+          images: JSON.parse(r.images || "[]"),
+          facilities: JSON.parse(r.facilities || "[]")
+        }))
+        res.json(parsed);
+      });
     });
   } else {
     db.query("SELECT * FROM properties ORDER BY property_id DESC", (err, results) => {
